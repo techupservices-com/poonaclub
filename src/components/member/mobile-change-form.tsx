@@ -41,7 +41,7 @@ export function MobileChangeForm() {
   return (
     <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
       <form onSubmit={requestChange} className="soft-card rounded-[24px] p-5">
-        <p className="font-mono text-xs uppercase tracking-[0.24em] text-rose-700">Step 1</p>
+        <p className="font-mono text-xs uppercase tracking-[0.24em] text-[#3c589e]">Step 1</p>
         <h3 className="mt-2 text-lg font-semibold">Request a new personal mobile number</h3>
         <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
           The new number stays pending until its WhatsApp OTP is verified.
@@ -50,11 +50,11 @@ export function MobileChangeForm() {
           New mobile number
           <input value={newMobile} onChange={(e) => setNewMobile(e.target.value)} className="rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-[var(--foreground)]" />
         </label>
-        <button className="mt-4 rounded-2xl bg-rose-600 px-4 py-3 text-sm font-semibold text-white hover:bg-rose-700">Send OTP</button>
+        <button className="mt-4 rounded-2xl bg-[#3c589e] px-4 py-3 text-sm font-semibold text-white hover:bg-[#2f467e]">Send OTP</button>
       </form>
 
       <form onSubmit={verifyChange} className="soft-card rounded-[24px] p-5">
-        <p className="font-mono text-xs uppercase tracking-[0.24em] text-rose-700">Step 2</p>
+        <p className="font-mono text-xs uppercase tracking-[0.24em] text-[#3c589e]">Step 2</p>
         <h3 className="mt-2 text-lg font-semibold">Verify new number</h3>
         <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
           Enter the OTP received on the new mobile number to activate it.

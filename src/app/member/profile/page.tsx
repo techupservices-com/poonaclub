@@ -13,7 +13,7 @@ export default async function MemberProfilePage() {
       <div className="soft-card rounded-[28px] p-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <p className="font-mono text-xs uppercase tracking-[0.24em] text-rose-700">Profile step</p>
+            <p className="font-mono text-xs uppercase tracking-[0.24em] text-[#3c589e]">Profile step</p>
             <h2 className="mt-2 text-2xl font-semibold">Complete your address and contact details</h2>
             <p className="mt-2 text-sm leading-6 text-[var(--muted)]">This step is complete when your email, address, city, and pincode are all present and correct.</p>
           </div>

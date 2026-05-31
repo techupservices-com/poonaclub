@@ -76,16 +76,16 @@ export function MemberOtpForm() {
 
   return (
     <form onSubmit={onSubmit} className="space-y-5">
-      <div className="rounded-[22px] border border-[var(--border)] bg-rose-50/70 px-4 py-4 text-sm leading-6 text-rose-900">
+      <div className="rounded-[22px] border border-[var(--border)] bg-[#eef2fb]/70 px-4 py-4 text-sm leading-6 text-[#24345f]">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <span className="font-mono text-xs uppercase tracking-[0.24em] text-rose-700">Sending OTP to</span>
+            <span className="font-mono text-xs uppercase tracking-[0.24em] text-[#3c589e]">Sending OTP to</span>
             <p className="mt-2 text-lg font-semibold">{formatMobile(mobile || identifier)}</p>
           </div>
           <button
             type="button"
             onClick={() => router.push(`/login/member?identifier=${encodeURIComponent(identifier)}`)}
-            className="rounded-full border border-rose-200 bg-white px-4 py-2 text-sm font-semibold text-rose-700 hover:border-rose-300 hover:bg-rose-100"
+            className="rounded-full border border-[#b9c8ea] bg-white px-4 py-2 text-sm font-semibold text-[#3c589e] hover:border-[#6f84ba] hover:bg-[#dfe6f8]"
           >
             Edit
           </button>
@@ -109,12 +109,12 @@ export function MemberOtpForm() {
           value={otp}
           onChange={(event) => setOtp(event.target.value)}
           placeholder="6 digit code"
-          className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-base tracking-[0.35em] text-[var(--foreground)] shadow-sm focus:border-rose-300 md:px-5 md:py-4 md:text-lg"
+          className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-base tracking-[0.35em] text-[var(--foreground)] shadow-sm focus:border-[#6f84ba] md:px-5 md:py-4 md:text-lg"
           required
         />
       </div>
 
-      {error ? <p className="text-sm text-rose-700">{error}</p> : null}
+      {error ? <p className="text-sm text-[#3c589e]">{error}</p> : null}
 
       <div className="rounded-[22px] border border-[var(--border)] bg-white px-4 py-4 text-sm text-[var(--muted)]">
         {secondsLeft > 0 ? (
@@ -124,7 +124,7 @@ export function MemberOtpForm() {
             type="button"
             onClick={onResendOtp}
             disabled={isResending}
-            className="font-semibold text-rose-700 hover:text-rose-800 disabled:opacity-60"
+            className="font-semibold text-[#3c589e] hover:text-[#2f467e] disabled:opacity-60"
           >
             {isResending ? "Resending OTP..." : "Resend OTP"}
           </button>
@@ -134,7 +134,7 @@ export function MemberOtpForm() {
       <button
         type="submit"
         disabled={isLoading}
-        className="w-full rounded-2xl bg-rose-600 px-4 py-3 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-60"
+        className="w-full rounded-2xl bg-[#3c589e] px-4 py-3 text-sm font-semibold text-white hover:bg-[#2f467e] disabled:opacity-60"
       >
         {isLoading ? "Verifying..." : "Verify and continue"}
       </button>

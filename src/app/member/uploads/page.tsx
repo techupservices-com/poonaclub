@@ -12,7 +12,7 @@ export default async function UploadsPage() {
       <div className="soft-card rounded-[28px] p-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <p className="font-mono text-xs uppercase tracking-[0.24em] text-rose-700">Uploads step</p>
+            <p className="font-mono text-xs uppercase tracking-[0.24em] text-[#3c589e]">Uploads step</p>
             <h2 className="mt-2 text-2xl font-semibold">Upload selfie and supporting document</h2>
             <p className="mt-2 text-sm leading-6 text-[var(--muted)]">This step is complete only when both files are uploaded successfully to your member record.</p>
           </div>

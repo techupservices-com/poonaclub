@@ -11,18 +11,28 @@ import { cn, formatMobile } from "@/lib/utils";
 export function MemberDirectory({ members }: { members: MemberWithVerification[] }) {
   const [query, setQuery] = useState("");
   const [view, setView] = useState<"grid" | "list">("grid");
+  const [filter, setFilter] = useState<"all" | "verified" | "pending" | "shared">("all");
   const [page, setPage] = useState(1);
 
   const filtered = useMemo(() => {
     const value = query.trim().toLowerCase();
-    if (!value) return members;
-    return members.filter((member) =>
-      [member.fullName, member.membershipId, member.currentMobile]
-        .join(" ")
-        .toLowerCase()
-        .includes(value),
-    );
-  }, [members, query]);
+    return members.filter((member) => {
+      const matchesQuery =
+        !value ||
+        [member.fullName, member.membershipId, member.currentMobile]
+          .join(" ")
+          .toLowerCase()
+          .includes(value);
+
+      const matchesFilter =
+        filter === "all" ||
+        (filter === "verified" && member.verification.completed) ||
+        (filter === "pending" && !member.verification.completed) ||
+        (filter === "shared" && member.linkedMemberCount > 1);
+
+      return matchesQuery && matchesFilter;
+    });
+  }, [filter, members, query]);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, pageCount);
@@ -33,7 +43,7 @@ export function MemberDirectory({ members }: { members: MemberWithVerification[]
       <div className="shell-panel rounded-[24px] p-4 md:p-5">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex-1">
-            <p className="font-mono text-xs uppercase tracking-[0.24em] text-rose-700">Member directory</p>
+            <p className="font-mono text-xs uppercase tracking-[0.24em] text-[#3c589e]">Member directory</p>
             <label htmlFor="member-search" className="mb-2 block text-sm font-medium text-[var(--foreground)]">
               Search by member name, membership ID or mobile number
             </label>
@@ -48,9 +58,35 @@ export function MemberDirectory({ members }: { members: MemberWithVerification[]
               className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-[var(--foreground)]"
             />
           </div>
-          <div className="flex flex-wrap gap-2">
-            <button onClick={() => setView("grid")} className={cn("rounded-full border px-4 py-2 text-sm font-medium", view === "grid" ? "border-rose-300 bg-rose-600 text-white" : "border-[var(--border)] bg-white text-[var(--foreground)]")}>Grid</button>
-            <button onClick={() => setView("list")} className={cn("rounded-full border px-4 py-2 text-sm font-medium", view === "list" ? "border-rose-300 bg-rose-600 text-white" : "border-[var(--border)] bg-white text-[var(--foreground)]")}>List</button>
+          <div className="flex flex-col gap-3 lg:items-end">
+            <div className="flex flex-wrap gap-2">
+              <button onClick={() => setView("grid")} className={cn("rounded-full border px-4 py-2 text-sm font-medium", view === "grid" ? "border-[#6f84ba] bg-[#3c589e] text-white" : "border-[var(--border)] bg-white text-[var(--foreground)]")}>Grid</button>
+              <button onClick={() => setView("list")} className={cn("rounded-full border px-4 py-2 text-sm font-medium", view === "list" ? "border-[#6f84ba] bg-[#3c589e] text-white" : "border-[var(--border)] bg-white text-[var(--foreground)]")}>List</button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {[
+                ["all", "All members"],
+                ["verified", "Verified"],
+                ["pending", "Pending"],
+                ["shared", "Shared mobile"],
+              ].map(([value, label]) => (
+                <button
+                  key={value}
+                  onClick={() => {
+                    setFilter(value as typeof filter);
+                    setPage(1);
+                  }}
+                  className={cn(
+                    "rounded-full border px-4 py-2 text-sm font-medium",
+                    filter === value
+                      ? "border-[#6f84ba] bg-[#eef2fb] text-[#3c589e]"
+                      : "border-[var(--border)] bg-white text-[var(--foreground)]",
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -72,7 +108,7 @@ export function MemberDirectory({ members }: { members: MemberWithVerification[]
               </div>
             </div>
             <div className="mt-4 flex gap-2 md:mt-0 md:flex-col">
-              <Link href={`/admin/members/${member.id}`} className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-medium text-[var(--foreground)] hover:border-rose-300 hover:bg-rose-50">View</Link>
+              <Link href={`/admin/members/${member.id}`} className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-medium text-[var(--foreground)] hover:border-[#6f84ba] hover:bg-[#eef2fb]">View</Link>
               <Link href={`/admin/members/${member.id}/edit`} className="rounded-full bg-stone-200 px-4 py-2 text-sm font-medium text-stone-700 hover:bg-stone-300">Edit</Link>
             </div>
           </article>

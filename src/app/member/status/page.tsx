@@ -26,7 +26,7 @@ export default async function MemberStatusPage() {
       </div>
       <div className="mt-6 grid gap-3">
         {items.map((item) => (
-          <Link key={item.label} href={item.href} className="rounded-[22px] border border-[var(--border)] bg-white px-4 py-4 flex items-center justify-between gap-3 hover:border-rose-300 hover:bg-rose-50/40">
+          <Link key={item.label} href={item.href} className="rounded-[22px] border border-[var(--border)] bg-white px-4 py-4 flex items-center justify-between gap-3 hover:border-[#6f84ba] hover:bg-[#eef2fb]/40">
             <div>
               <p className="font-medium">{item.label}</p>
               <p className="mt-1 text-sm text-[var(--muted)]">{item.action}</p>

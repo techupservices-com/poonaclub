@@ -62,7 +62,7 @@ export function LinkedMemberManager({ members }: { members: MemberWithVerificati
                 className="min-w-0 flex-1 rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-[var(--foreground)]"
                 required
               />
-              <button className="rounded-2xl bg-rose-600 px-4 py-3 text-sm font-semibold text-white hover:bg-rose-700">
+              <button className="rounded-2xl bg-[#3c589e] px-4 py-3 text-sm font-semibold text-white hover:bg-[#2f467e]">
                 Send member OTP
               </button>
             </form>

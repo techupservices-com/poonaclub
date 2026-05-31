@@ -29,7 +29,7 @@ export function PortalShell({
         <header className="shell-panel rounded-[28px] px-5 py-5 md:px-7">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <p className="font-mono text-xs uppercase tracking-[0.3em] text-rose-700">
+              <p className="font-mono text-xs uppercase tracking-[0.3em] text-[#3c589e]">
                 {APP_NAME}
               </p>
               <h1 className="mt-2 text-3xl font-semibold text-[var(--foreground)] md:text-4xl">
@@ -49,8 +49,8 @@ export function PortalShell({
                     className={cn(
                       "rounded-full border px-4 py-2 text-sm font-medium",
                       pathname === item.href
-                        ? "border-rose-300 bg-rose-600 text-white shadow-sm"
-                        : "border-[var(--border)] bg-white/80 text-[var(--foreground)] hover:border-rose-300 hover:bg-rose-50",
+                        ? "border-[#6f84ba] bg-[#3c589e] text-white shadow-sm"
+                        : "border-[var(--border)] bg-white/80 text-[var(--foreground)] hover:border-[#6f84ba] hover:bg-[#eef2fb]",
                     )}
                   >
                     {item.label}

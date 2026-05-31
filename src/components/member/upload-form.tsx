@@ -34,7 +34,7 @@ export function UploadForm() {
       </label>
       <div className="md:col-span-2 flex items-center justify-between gap-4 pt-2">
         <p className="text-sm text-[var(--muted)]">{message ?? "Accepted formats: images for selfie, images or PDF for supporting document."}</p>
-        <button className="rounded-2xl bg-rose-600 px-4 py-3 text-sm font-semibold text-white hover:bg-rose-700">Upload files</button>
+        <button className="rounded-2xl bg-[#3c589e] px-4 py-3 text-sm font-semibold text-white hover:bg-[#2f467e]">Upload files</button>
       </div>
     </form>
   );

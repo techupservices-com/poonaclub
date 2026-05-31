@@ -51,17 +51,17 @@ export function MemberLoginForm({ initialIdentifier = "" }: { initialIdentifier?
           value={identifier}
           onChange={(event) => setIdentifier(event.target.value)}
           placeholder="T295 or 9604420719"
-          className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-base text-[var(--foreground)] shadow-sm focus:border-rose-300"
+          className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-base text-[var(--foreground)] shadow-sm focus:border-[#6f84ba]"
           required
         />
       </div>
 
-      {error ? <p className="text-sm text-rose-700">{error}</p> : null}
+      {error ? <p className="text-sm text-[#3c589e]">{error}</p> : null}
 
       <button
         type="submit"
         disabled={isLoading}
-        className="w-full rounded-2xl bg-rose-600 px-4 py-3 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-60"
+        className="w-full rounded-2xl bg-[#3c589e] px-4 py-3 text-sm font-semibold text-white hover:bg-[#2f467e] disabled:opacity-60"
       >
         {isLoading ? "Sending WhatsApp OTP..." : "Send WhatsApp OTP"}
       </button>

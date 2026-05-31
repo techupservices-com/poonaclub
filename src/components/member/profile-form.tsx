@@ -55,7 +55,7 @@ export function ProfileForm({ member }: { member: MemberWithVerification }) {
       </label>
       <div className="md:col-span-2 flex items-center justify-between gap-4 pt-2">
         <p className="text-sm text-[var(--muted)]">{message ?? "Save once all details are correct."}</p>
-        <button className="rounded-2xl bg-rose-600 px-4 py-3 text-sm font-semibold text-white hover:bg-rose-700">Save profile changes</button>
+        <button className="rounded-2xl bg-[#3c589e] px-4 py-3 text-sm font-semibold text-white hover:bg-[#2f467e]">Save profile changes</button>
       </div>
     </form>
   );

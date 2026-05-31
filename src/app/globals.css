@@ -1,21 +1,21 @@
 @import "tailwindcss";
 
 :root {
-  --background: #fff8f4;
-  --foreground: #44211a;
-  --surface: #fffdfa;
-  --surface-strong: #fff4ee;
-  --surface-muted: #f6e4dc;
-  --border: #e6c9bb;
-  --primary: #dc2626;
-  --primary-strong: #991b1b;
-  --accent: #fbbf24;
+  --background: #f4f7fc;
+  --foreground: #21304f;
+  --surface: #ffffff;
+  --surface-strong: #eef2fb;
+  --surface-muted: #dde5f5;
+  --border: #c8d3ea;
+  --primary: #3c589e;
+  --primary-strong: #2f467e;
+  --accent: #6d85be;
   --success: #18794e;
   --warning: #9a6700;
   --danger: #b42318;
-  --muted: #7b4b3e;
-  --shadow-sm: 0 8px 18px rgba(104, 40, 20, 0.08);
-  --shadow-md: 0 16px 40px rgba(104, 40, 20, 0.12);
+  --muted: #596b91;
+  --shadow-sm: 0 8px 18px rgba(34, 57, 110, 0.08);
+  --shadow-md: 0 16px 40px rgba(34, 57, 110, 0.12);
 }
 
 @theme inline {
@@ -38,8 +38,8 @@ body {
   color: var(--foreground);
   font-family: var(--font-fira-sans), sans-serif;
   background-image:
-    radial-gradient(circle at top left, rgba(220, 38, 38, 0.08), transparent 32%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 248, 244, 0.94));
+    radial-gradient(circle at top left, rgba(60, 88, 158, 0.1), transparent 32%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(244, 247, 252, 0.98));
 }
 
 a,
@@ -65,24 +65,24 @@ a:focus-visible,
 input:focus-visible,
 textarea:focus-visible,
 select:focus-visible {
-  outline: 3px solid rgba(251, 191, 36, 0.45);
+  outline: 3px solid rgba(60, 88, 158, 0.28);
   outline-offset: 2px;
 }
 
 ::selection {
-  background: rgba(220, 38, 38, 0.16);
+  background: rgba(60, 88, 158, 0.16);
 }
 
 .shell-panel {
-  background: rgba(255, 253, 250, 0.86);
-  border: 1px solid rgba(230, 201, 187, 0.9);
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(200, 211, 234, 0.9);
   box-shadow: var(--shadow-sm);
   backdrop-filter: blur(14px);
 }
 
 .soft-card {
   background: var(--surface);
-  border: 1px solid rgba(230, 201, 187, 0.8);
+  border: 1px solid rgba(200, 211, 234, 0.8);
   box-shadow: var(--shadow-sm);
 }
 
