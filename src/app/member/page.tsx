@@ -1,6 +1,8 @@
+import { Camera } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { getMemberSession } from "@/lib/auth";
-import { getLinkedMembers, getMemberById, listDocuments } from "@/lib/data";
+import { getLinkedMembers, getMemberById, getMemberProfilePhotoUrl, listDocuments } from "@/lib/data";
 import { formatMobile } from "@/lib/utils";
 import { StatusChip } from "@/components/shared/status-chip";
 
@@ -12,6 +14,7 @@ export default async function MemberDashboardPage() {
 
   const linkedMembers = await getLinkedMembers(member.id);
   const documents = await listDocuments(member.id);
+  const profilePhotoUrl = await getMemberProfilePhotoUrl(member.id, member.photoUrl);
   const requiresLinkedMemberCleanup =
     linkedMembers.length > 1 && linkedMembers.some((entry) => !entry.mobileVerified);
 
@@ -64,20 +67,65 @@ export default async function MemberDashboardPage() {
     <>
       <section className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
         <div className="soft-card rounded-[28px] p-6">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div>
+          <div className="flex flex-col gap-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-3">
                 <h2 className="text-2xl font-semibold">{member.fullName}</h2>
                 <StatusChip label={member.verification.completed ? "Membership verified" : "Action needed"} tone={member.verification.completed ? "success" : "warning"} />
               </div>
-              <p className="mt-2 text-sm text-[var(--muted)]">{member.membershipId} · {member.memberType}</p>
-              <p className="mt-4 max-w-2xl text-sm leading-6 text-[var(--muted)]">
-                Follow the steps below one by one. Completed steps are clearly marked, and incomplete steps take you straight to the page where you can finish them.
-              </p>
+              <p className="text-sm text-[var(--muted)]">{member.membershipId} · {member.memberType}</p>
             </div>
-            <div className="rounded-[24px] border border-[#d7e0f4] bg-[#eef2fb] px-4 py-3 text-sm leading-6 text-[#24345f]">
-              <p className="font-medium">Registered mobile</p>
-              <p className="mt-1 text-lg font-semibold">{formatMobile(member.currentMobile)}</p>
+
+            <div className="grid gap-5 lg:grid-cols-[180px_1fr] lg:items-start">
+              <Link
+                href="/member/uploads"
+                className="group relative flex aspect-[4/5] w-full items-center justify-center overflow-hidden rounded-[26px] border border-[var(--border)] bg-[#eef2fb]"
+              >
+                {profilePhotoUrl ? (
+                  <Image
+                    src={profilePhotoUrl}
+                    alt={`${member.fullName} profile`}
+                    fill
+                    unoptimized
+                    className="object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full w-full flex-col items-center justify-center gap-3 text-[#3c589e]">
+                    <span className="flex h-16 w-16 items-center justify-center rounded-full bg-white shadow-sm">
+                      <Camera className="h-7 w-7" />
+                    </span>
+                    <span className="text-sm font-semibold">Set profile photo</span>
+                  </div>
+                )}
+                <span className="absolute inset-x-3 bottom-3 rounded-full bg-white/92 px-3 py-2 text-center text-xs font-semibold text-[#24345f] shadow-sm transition group-hover:bg-white">
+                  {profilePhotoUrl ? "Change photo" : "Upload selfie"}
+                </span>
+              </Link>
+
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="rounded-[22px] border border-[var(--border)] bg-white px-4 py-4">
+                  <p className="text-sm text-[var(--muted)]">Registered mobile</p>
+                  <p className="mt-1 font-semibold text-[var(--foreground)]">{formatMobile(member.currentMobile)}</p>
+                </div>
+                <div className="rounded-[22px] border border-[var(--border)] bg-white px-4 py-4">
+                  <p className="text-sm text-[var(--muted)]">Email</p>
+                  <p className="mt-1 font-semibold text-[var(--foreground)]">{member.email || "Not added yet"}</p>
+                </div>
+                <div className="rounded-[22px] border border-[var(--border)] bg-white px-4 py-4">
+                  <p className="text-sm text-[var(--muted)]">Address</p>
+                  <p className="mt-1 text-sm leading-6 text-[var(--foreground)]">{member.address1 || "Not added"}</p>
+                </div>
+                <div className="rounded-[22px] border border-[var(--border)] bg-white px-4 py-4">
+                  <p className="text-sm text-[var(--muted)]">City / Pincode</p>
+                  <p className="mt-1 font-semibold text-[var(--foreground)]">{member.city || "-"} {member.pincode || ""}</p>
+                </div>
+                <div className="rounded-[22px] border border-[var(--border)] bg-white px-4 py-4 md:col-span-2">
+                  <p className="text-sm text-[var(--muted)]">What to do next</p>
+                  <p className="mt-1 text-sm leading-6 text-[var(--foreground)]">
+                    Follow the steps below one by one. Completed steps are clearly marked, and incomplete steps take you straight to the page where you can finish them.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -130,14 +178,6 @@ export default async function MemberDashboardPage() {
       </section>
 
       <section className="grid gap-4 lg:grid-cols-2">
-        <div className="soft-card rounded-[28px] p-6">
-          <h3 className="text-xl font-semibold">Your details on record</h3>
-          <div className="mt-4 space-y-3 text-sm leading-6 text-[var(--muted)]">
-            <p><span className="font-medium text-[var(--foreground)]">Email:</span> {member.email || "Not added yet"}</p>
-            <p><span className="font-medium text-[var(--foreground)]">Address:</span> {member.address1}, {member.address2}, {member.address3}, {member.city} {member.pincode}</p>
-          </div>
-        </div>
-
         <div className="soft-card rounded-[28px] p-6">
           <h3 className="text-xl font-semibold">Household number check</h3>
           <div className="mt-4 space-y-3">

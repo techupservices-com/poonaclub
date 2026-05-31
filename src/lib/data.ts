@@ -303,6 +303,23 @@ export async function listDocuments(profileId: string) {
   return (data as DocumentRow[]).map(mapDocument);
 }
 
+export async function getMemberProfilePhotoUrl(profileId: string, photoUrl?: string) {
+  if (photoUrl?.startsWith("http://") || photoUrl?.startsWith("https://")) {
+    return photoUrl;
+  }
+
+  const client = getRequiredSupabaseClient();
+  const documents = await listDocuments(profileId);
+  const selfie = documents.find((document) => document.documentType === "selfie");
+  const storagePath = photoUrl || selfie?.filePath;
+
+  if (!storagePath) return null;
+
+  const { data, error } = await client.storage.from(SELFIE_BUCKET).createSignedUrl(storagePath, 60 * 60);
+  if (error || !data?.signedUrl) return null;
+  return data.signedUrl;
+}
+
 export async function createMobileChangeRequest(input: Omit<MobileChangeRequest, "id" | "createdAt">) {
   const client = getRequiredSupabaseClient();
 
