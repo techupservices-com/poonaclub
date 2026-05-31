@@ -1,6 +1,6 @@
 import { MemberDirectory } from "@/components/admin/member-directory";
-import { listMembersWithVerification } from "@/lib/mock-store";
+import { listMembersWithVerification } from "@/lib/data";
 
-export default function AdminMembersPage() {
-  return <MemberDirectory members={listMembersWithVerification()} />;
+export default async function AdminMembersPage() {
+  return <MemberDirectory members={await listMembersWithVerification()} />;
 }

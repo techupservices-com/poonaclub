@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { listAuditLogs, listMembersWithVerification } from "@/lib/mock-store";
+import { listAuditLogs, listMembersWithVerification } from "@/lib/data";
 
-export default function AdminOverviewPage() {
-  const members = listMembersWithVerification();
-  const auditLogs = listAuditLogs().slice(0, 4);
+export default async function AdminOverviewPage() {
+  const members = await listMembersWithVerification();
+  const auditLogs = (await listAuditLogs()).slice(0, 4);
 
   return (
     <>

@@ -1,15 +1,15 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { StatusChip } from "@/components/shared/status-chip";
-import { getMemberById, listDocuments } from "@/lib/mock-store";
+import { getMemberById, listDocuments } from "@/lib/data";
 import { formatDate, formatMobile } from "@/lib/utils";
 
 export default async function AdminMemberDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const member = getMemberById(id);
+  const member = await getMemberById(id);
   if (!member) notFound();
 
-  const documents = listDocuments(id);
+  const documents = await listDocuments(id);
 
   return (
     <section className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">

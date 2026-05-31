@@ -1,10 +1,10 @@
 import { ProfileForm } from "@/components/member/profile-form";
 import { getMemberSession } from "@/lib/auth";
-import { getMemberById } from "@/lib/mock-store";
+import { getMemberById } from "@/lib/data";
 
 export default async function MemberProfilePage() {
   const session = await getMemberSession();
-  const member = session ? getMemberById(session.subject) : null;
+  const member = session ? await getMemberById(session.subject) : null;
   if (!member) return null;
 
   return (

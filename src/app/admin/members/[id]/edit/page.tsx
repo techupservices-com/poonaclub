@@ -1,10 +1,10 @@
 import { notFound } from "next/navigation";
 import { AdminMemberForm } from "@/components/admin/admin-member-form";
-import { getMemberById } from "@/lib/mock-store";
+import { getMemberById } from "@/lib/data";
 
 export default async function AdminMemberEditPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const member = getMemberById(id);
+  const member = await getMemberById(id);
   if (!member) notFound();
 
   return (

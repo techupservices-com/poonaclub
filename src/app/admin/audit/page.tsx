@@ -1,7 +1,7 @@
-import { listAuditLogs } from "@/lib/mock-store";
+import { listAuditLogs } from "@/lib/data";
 
-export default function AdminAuditPage() {
-  const audits = listAuditLogs();
+export default async function AdminAuditPage() {
+  const audits = await listAuditLogs();
 
   return (
     <section className="soft-card rounded-[28px] p-6">

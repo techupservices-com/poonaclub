@@ -68,7 +68,7 @@ create table if not exists audit_logs (
   created_at timestamptz not null default now()
 );
 
-create view verification_status as
+create or replace view verification_status as
 select
   p.id as profile_id,
   p.mobile_verified,

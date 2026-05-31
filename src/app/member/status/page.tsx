@@ -1,10 +1,10 @@
 import { getMemberSession } from "@/lib/auth";
-import { getMemberById } from "@/lib/mock-store";
+import { getMemberById } from "@/lib/data";
 import { StatusChip } from "@/components/shared/status-chip";
 
 export default async function MemberStatusPage() {
   const session = await getMemberSession();
-  const member = session ? getMemberById(session.subject) : null;
+  const member = session ? await getMemberById(session.subject) : null;
   if (!member) return null;
 
   const items = [

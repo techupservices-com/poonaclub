@@ -1,17 +1,17 @@
 import Link from "next/link";
 import { getMemberSession } from "@/lib/auth";
-import { getLinkedMembers, getMemberById, listDocuments } from "@/lib/mock-store";
+import { getLinkedMembers, getMemberById, listDocuments } from "@/lib/data";
 import { formatMobile } from "@/lib/utils";
 import { StatusChip } from "@/components/shared/status-chip";
 
 export default async function MemberDashboardPage() {
   const session = await getMemberSession();
-  const member = session ? getMemberById(session.subject) : null;
+  const member = session ? await getMemberById(session.subject) : null;
 
   if (!member) return null;
 
-  const linkedMembers = getLinkedMembers(member.id);
-  const documents = listDocuments(member.id);
+  const linkedMembers = await getLinkedMembers(member.id);
+  const documents = await listDocuments(member.id);
 
   return (
     <>

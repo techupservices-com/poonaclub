@@ -1,5 +1,5 @@
-import { listMembersWithVerification } from "@/lib/mock-store";
+import { listMembersWithVerification } from "@/lib/data";
 
 export async function GET() {
-  return Response.json({ members: listMembersWithVerification() });
+  return Response.json({ members: await listMembersWithVerification() });
 }

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { getMemberSession } from "@/lib/auth";
-import { addAuditLog, updateMember } from "@/lib/mock-store";
+import { addAuditLog, updateMember } from "@/lib/data";
 
 export async function PATCH(request: Request) {
   const session = await getMemberSession();
@@ -15,8 +15,8 @@ export async function PATCH(request: Request) {
     pincode: z.string().min(4),
   });
   const body = schema.parse(await request.json());
-  updateMember(session.subject, body);
-  addAuditLog({ actorType: "member", actorId: session.subject, action: "Updated own profile", targetProfileId: session.subject, metadata: { scope: "profile" } });
+  await updateMember(session.subject, body);
+  await addAuditLog({ actorType: "member", actorId: session.subject, action: "Updated own profile", targetProfileId: session.subject, metadata: { scope: "profile" } });
   return Response.json({ message: "Profile updated successfully." });
 }
 

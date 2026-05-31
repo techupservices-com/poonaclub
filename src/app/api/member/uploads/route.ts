@@ -1,5 +1,5 @@
 import { getMemberSession } from "@/lib/auth";
-import { addAuditLog, addDocument } from "@/lib/mock-store";
+import { addAuditLog, uploadMemberDocument } from "@/lib/data";
 
 export async function POST(request: Request) {
   const session = await getMemberSession();
@@ -13,8 +13,20 @@ export async function POST(request: Request) {
     return Response.json({ error: "Both selfie and supporting document are required." }, { status: 400 });
   }
 
-  addDocument(session.subject, "selfie", selfie.name || "selfie-upload", selfie.type || "image/jpeg");
-  addDocument(session.subject, "document", document.name || "supporting-document", document.type || "application/octet-stream");
-  addAuditLog({ actorType: "member", actorId: session.subject, action: "Uploaded verification files", targetProfileId: session.subject, metadata: { scope: "uploads" } });
-  return Response.json({ message: "Upload metadata recorded. Connect Supabase Storage to persist files in production." });
+  await uploadMemberDocument(
+    session.subject,
+    "selfie",
+    selfie.name || "selfie-upload",
+    selfie.type || "image/jpeg",
+    await selfie.arrayBuffer(),
+  );
+  await uploadMemberDocument(
+    session.subject,
+    "document",
+    document.name || "supporting-document",
+    document.type || "application/octet-stream",
+    await document.arrayBuffer(),
+  );
+  await addAuditLog({ actorType: "member", actorId: session.subject, action: "Uploaded verification files", targetProfileId: session.subject, metadata: { scope: "uploads" } });
+  return Response.json({ message: "Files uploaded and linked to your member profile." });
 }

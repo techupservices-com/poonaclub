@@ -1,13 +1,13 @@
 import { z } from "zod";
 import { getAdminSession } from "@/lib/auth";
-import { addAuditLog, getMemberById, updateMember } from "@/lib/mock-store";
+import { addAuditLog, getMemberById, updateMember } from "@/lib/data";
 
 export async function PATCH(request: Request, context: RouteContext<"/api/admin/members/[id]">) {
   const session = await getAdminSession();
   if (!session) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await context.params;
-  const member = getMemberById(id);
+  const member = await getMemberById(id);
   if (!member) return Response.json({ error: "Member not found." }, { status: 404 });
 
   const schema = z.object({
@@ -21,7 +21,7 @@ export async function PATCH(request: Request, context: RouteContext<"/api/admin/
     status: z.string(),
   });
   const body = schema.parse(await request.json());
-  updateMember(id, body);
-  addAuditLog({ actorType: "admin", actorId: session.subject, action: "Admin updated member", targetProfileId: id, metadata: { scope: "admin-edit" } });
+  await updateMember(id, body);
+  await addAuditLog({ actorType: "admin", actorId: session.subject, action: "Admin updated member", targetProfileId: id, metadata: { scope: "admin-edit" } });
   return Response.json({ message: "Member details updated." });
 }

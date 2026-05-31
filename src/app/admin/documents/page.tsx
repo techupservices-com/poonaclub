@@ -1,7 +1,7 @@
-import { listMembersWithVerification } from "@/lib/mock-store";
+import { listMembersWithVerification } from "@/lib/data";
 
-export default function AdminDocumentsPage() {
-  const members = listMembersWithVerification();
+export default async function AdminDocumentsPage() {
+  const members = await listMembersWithVerification();
   const pending = members.filter(
     (member) => !member.verification.selfieUploaded || !member.verification.documentUploaded,
   );

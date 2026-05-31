@@ -1,10 +1,10 @@
 import { LinkedMemberManager } from "@/components/member/linked-member-manager";
 import { getMemberSession } from "@/lib/auth";
-import { getLinkedMembers } from "@/lib/mock-store";
+import { getLinkedMembers } from "@/lib/data";
 
 export default async function LinkedMembersPage() {
   const session = await getMemberSession();
-  const members = session ? getLinkedMembers(session.subject) : [];
+  const members = session ? await getLinkedMembers(session.subject) : [];
 
   return (
     <section className="grid gap-4">

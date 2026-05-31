@@ -6,7 +6,7 @@ import { verifyOtp } from "@/lib/otp-store";
 export async function POST(request: Request) {
   const schema = z.object({ profileId: z.string().min(1), otp: z.string().length(6) });
   const body = schema.parse(await request.json());
-  const result = verifyOtp(body.profileId, "login", body.otp);
+  const result = await verifyOtp(body.profileId, "login", body.otp);
 
   if (!result.ok) {
     return Response.json({ error: result.reason }, { status: 400 });
