@@ -16,6 +16,7 @@ export default async function AdminMemberDetailPage({ params }: { params: Promis
       <div className="soft-card rounded-[28px] p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
+            <p className="font-mono text-xs uppercase tracking-[0.24em] text-rose-700">Member record</p>
             <h2 className="text-3xl font-semibold">{member.fullName}</h2>
             <p className="mt-2 text-sm text-[var(--muted)]">{member.membershipId} · {member.memberType}</p>
           </div>
@@ -31,11 +32,16 @@ export default async function AdminMemberDetailPage({ params }: { params: Promis
           <p className="text-sm text-[var(--muted)]">Address</p>
           <p className="mt-1 leading-7">{member.address1}, {member.address2}, {member.address3}, {member.city} {member.pincode}</p>
         </div>
-        <Link href={`/admin/members/${member.id}/edit`} className="mt-6 inline-flex rounded-full bg-[var(--foreground)] px-4 py-3 text-sm font-semibold text-white hover:bg-[var(--primary-strong)]">Edit member</Link>
+        <div className="mt-6 flex flex-wrap gap-3">
+          <Link href={`/admin/members/${member.id}/edit`} className="inline-flex rounded-full bg-[var(--foreground)] px-4 py-3 text-sm font-semibold text-white hover:bg-[var(--primary-strong)]">Edit member</Link>
+          <Link href="/admin/members" className="inline-flex rounded-full border border-[var(--border)] bg-white px-4 py-3 text-sm font-semibold text-[var(--foreground)] hover:border-rose-300 hover:bg-rose-50">Back to directory</Link>
+        </div>
       </div>
 
       <div className="soft-card rounded-[28px] p-6">
-        <h3 className="text-xl font-semibold">Documents and checklist</h3>
+        <p className="font-mono text-xs uppercase tracking-[0.24em] text-rose-700">Verification review</p>
+        <h3 className="mt-2 text-xl font-semibold">Documents and checklist</h3>
+        <p className="mt-2 text-sm leading-6 text-[var(--muted)]">This panel shows what the system has marked complete and what is still missing for full verification.</p>
         <div className="mt-4 space-y-3">
           <StatusChip label={member.verification.mobileVerified ? "Mobile verified" : "Mobile pending"} tone={member.verification.mobileVerified ? "success" : "warning"} />
           <StatusChip label={member.verification.profileConfirmed ? "Profile complete" : "Profile incomplete"} tone={member.verification.profileConfirmed ? "success" : "warning"} />

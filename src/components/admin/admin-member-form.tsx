@@ -31,6 +31,9 @@ export function AdminMemberForm({ member }: { member: MemberWithVerification }) 
 
   return (
     <form onSubmit={onSubmit} className="grid gap-4 md:grid-cols-2">
+      <div className="md:col-span-2 rounded-[22px] border border-amber-200 bg-amber-50 px-4 py-4 text-sm leading-6 text-amber-900">
+        Admin can correct member data here, but verification status remains system-driven. Update the fields carefully and save once the record is accurate.
+      </div>
       {Object.entries(form).map(([key, value]) => (
         <label
           key={key}
@@ -48,7 +51,7 @@ export function AdminMemberForm({ member }: { member: MemberWithVerification }) 
         </label>
       ))}
       <div className="md:col-span-2 flex items-center justify-between gap-4">
-        <p className="text-sm text-[var(--muted)]">{message}</p>
+        <p className="text-sm text-[var(--muted)]">{message ?? "Review member details, then save your corrections."}</p>
         <button className="rounded-2xl bg-[var(--foreground)] px-4 py-3 text-sm font-semibold text-white hover:bg-[var(--primary-strong)]">Save member details</button>
       </div>
     </form>

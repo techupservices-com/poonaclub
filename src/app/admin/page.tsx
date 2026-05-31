@@ -18,8 +18,9 @@ export default async function AdminOverviewPage() {
         <div className="soft-card rounded-[28px] p-6">
           <div className="flex items-center justify-between gap-3">
             <div>
+              <p className="font-mono text-xs uppercase tracking-[0.24em] text-rose-700">Main admin action</p>
               <h2 className="text-2xl font-semibold">Member directory</h2>
-              <p className="mt-2 text-sm leading-6 text-[var(--muted)]">Grid and list views follow the screenshot direction while improving spacing, search, and verification visibility.</p>
+              <p className="mt-2 text-sm leading-6 text-[var(--muted)]">Use the directory to search members, review verification progress, open full details, or correct profile information.</p>
             </div>
             <Link href="/admin/members" className="rounded-full bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700">Open members</Link>
           </div>
@@ -34,7 +35,8 @@ export default async function AdminOverviewPage() {
         </div>
 
         <div className="soft-card rounded-[28px] p-6">
-          <h2 className="text-2xl font-semibold">Recent audit events</h2>
+          <p className="font-mono text-xs uppercase tracking-[0.24em] text-rose-700">Recent activity</p>
+          <h2 className="mt-2 text-2xl font-semibold">Recent audit events</h2>
           <div className="mt-6 space-y-3">
             {auditLogs.length === 0 ? <p className="text-sm text-[var(--muted)]">No admin changes recorded yet.</p> : auditLogs.map((entry) => (
               <div key={entry.id} className="rounded-[24px] border border-[var(--border)] bg-white px-4 py-4">

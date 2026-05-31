@@ -33,6 +33,7 @@ export function MemberDirectory({ members }: { members: MemberWithVerification[]
       <div className="shell-panel rounded-[24px] p-4 md:p-5">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex-1">
+            <p className="font-mono text-xs uppercase tracking-[0.24em] text-rose-700">Member directory</p>
             <label htmlFor="member-search" className="mb-2 block text-sm font-medium text-[var(--foreground)]">
               Search by member name, membership ID or mobile number
             </label>
@@ -77,6 +78,12 @@ export function MemberDirectory({ members }: { members: MemberWithVerification[]
           </article>
         ))}
       </div>
+
+      {pagedMembers.length === 0 ? (
+        <div className="rounded-[24px] border border-dashed border-[var(--border)] bg-white/70 px-4 py-8 text-center text-sm text-[var(--muted)]">
+          No members match this search. Try a different name, membership ID, or mobile number.
+        </div>
+      ) : null}
 
       <div className="flex flex-col gap-3 rounded-[24px] border border-[var(--border)] bg-white/80 px-4 py-4 md:flex-row md:items-center md:justify-between">
         <p className="text-sm text-[var(--muted)]">
