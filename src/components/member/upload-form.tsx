@@ -11,12 +11,24 @@ export function UploadForm() {
   const [documentPreviewUrl, setDocumentPreviewUrl] = useState<string | null>(null);
   const [documentIsImage, setDocumentIsImage] = useState(false);
 
-  function resetPreviews() {
+  function clearSelfie(input: HTMLInputElement | null) {
     if (selfiePreviewUrl) URL.revokeObjectURL(selfiePreviewUrl);
-    if (documentPreviewUrl) URL.revokeObjectURL(documentPreviewUrl);
+    if (input) input.value = "";
     setSelfiePreviewUrl(null);
+    setSelfieFileName("No file chosen");
+  }
+
+  function clearDocument(input: HTMLInputElement | null) {
+    if (documentPreviewUrl) URL.revokeObjectURL(documentPreviewUrl);
+    if (input) input.value = "";
     setDocumentPreviewUrl(null);
+    setDocumentFileName("No file chosen");
     setDocumentIsImage(false);
+  }
+
+  function resetPreviews() {
+    clearSelfie(document.getElementById("selfie") as HTMLInputElement | null);
+    clearDocument(document.getElementById("document") as HTMLInputElement | null);
   }
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -69,8 +81,22 @@ export function UploadForm() {
           Choose file
         </label>
         {selfiePreviewUrl ? (
-          <div className="relative mt-2 aspect-[4/5] overflow-hidden rounded-[22px] border border-[var(--border)] bg-[#eef2fb]">
-            <Image src={selfiePreviewUrl} alt="Selected selfie preview" fill unoptimized className="object-cover" />
+          <div className="mt-2 grid gap-3">
+            <div className="relative aspect-[4/5] overflow-hidden rounded-[22px] border border-[var(--border)] bg-[#eef2fb]">
+              <Image src={selfiePreviewUrl} alt="Selected selfie preview" fill unoptimized className="object-cover" />
+            </div>
+            <div className="flex gap-2">
+              <label htmlFor="selfie" className="inline-flex w-fit rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm font-semibold text-[var(--foreground)] hover:border-[#6f84ba] hover:bg-[#eef2fb]">
+                Replace file
+              </label>
+              <button
+                type="button"
+                onClick={() => clearSelfie(document.getElementById("selfie") as HTMLInputElement | null)}
+                className="inline-flex w-fit rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm font-semibold text-[var(--foreground)] hover:border-[#6f84ba] hover:bg-[#eef2fb]"
+              >
+                Remove file
+              </button>
+            </div>
           </div>
         ) : null}
       </label>
@@ -108,13 +134,41 @@ export function UploadForm() {
         </label>
         {documentPreviewUrl ? (
           documentIsImage ? (
-            <div className="relative mt-2 aspect-[4/5] overflow-hidden rounded-[22px] border border-[var(--border)] bg-[#eef2fb]">
-              <Image src={documentPreviewUrl} alt="Selected supporting document preview" fill unoptimized className="object-cover" />
+            <div className="mt-2 grid gap-3">
+              <div className="relative aspect-[4/5] overflow-hidden rounded-[22px] border border-[var(--border)] bg-[#eef2fb]">
+                <Image src={documentPreviewUrl} alt="Selected supporting document preview" fill unoptimized className="object-cover" />
+              </div>
+              <div className="flex gap-2">
+                <label htmlFor="document" className="inline-flex w-fit rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm font-semibold text-[var(--foreground)] hover:border-[#6f84ba] hover:bg-[#eef2fb]">
+                  Replace file
+                </label>
+                <button
+                  type="button"
+                  onClick={() => clearDocument(document.getElementById("document") as HTMLInputElement | null)}
+                  className="inline-flex w-fit rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm font-semibold text-[var(--foreground)] hover:border-[#6f84ba] hover:bg-[#eef2fb]"
+                >
+                  Remove file
+                </button>
+              </div>
             </div>
           ) : (
-            <div className="mt-2 rounded-[22px] border border-[var(--border)] bg-[#eef2fb] px-4 py-5 text-sm text-[#24345f]">
-              <p className="font-semibold">Document selected</p>
-              <p className="mt-1 break-all text-[var(--muted)]">{documentFileName}</p>
+            <div className="mt-2 grid gap-3">
+              <div className="rounded-[22px] border border-[var(--border)] bg-[#eef2fb] px-4 py-5 text-sm text-[#24345f]">
+                <p className="font-semibold">Document selected</p>
+                <p className="mt-1 break-all text-[var(--muted)]">{documentFileName}</p>
+              </div>
+              <div className="flex gap-2">
+                <label htmlFor="document" className="inline-flex w-fit rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm font-semibold text-[var(--foreground)] hover:border-[#6f84ba] hover:bg-[#eef2fb]">
+                  Replace file
+                </label>
+                <button
+                  type="button"
+                  onClick={() => clearDocument(document.getElementById("document") as HTMLInputElement | null)}
+                  className="inline-flex w-fit rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm font-semibold text-[var(--foreground)] hover:border-[#6f84ba] hover:bg-[#eef2fb]"
+                >
+                  Remove file
+                </button>
+              </div>
             </div>
           )
         ) : null}
