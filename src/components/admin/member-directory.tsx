@@ -14,6 +14,23 @@ export function MemberDirectory({ members }: { members: MemberWithVerification[]
   const [filter, setFilter] = useState<"all" | "verified" | "pending" | "shared">("all");
   const [page, setPage] = useState(1);
 
+  const filterCounts = useMemo(
+    () => ({
+      all: members.length,
+      verified: members.filter((member) => member.verification.completed).length,
+      pending: members.filter((member) => !member.verification.completed).length,
+      shared: members.filter((member) => member.linkedMemberCount > 1).length,
+    }),
+    [members],
+  );
+
+  const filterOptions = [
+    { value: "all", label: "All members", count: filterCounts.all },
+    { value: "verified", label: "Verified", count: filterCounts.verified },
+    { value: "pending", label: "Pending", count: filterCounts.pending },
+    { value: "shared", label: "Shared mobile", count: filterCounts.shared },
+  ] as const;
+
   const filtered = useMemo(() => {
     const value = query.trim().toLowerCase();
     return members.filter((member) => {
@@ -41,6 +58,36 @@ export function MemberDirectory({ members }: { members: MemberWithVerification[]
   return (
     <div className="grid gap-5">
       <div className="shell-panel rounded-[24px] p-4 md:p-5">
+        <div className="mb-4 flex flex-wrap gap-2">
+          {filterOptions.map((option) => (
+            <button
+              key={option.value}
+              onClick={() => {
+                setFilter(option.value);
+                setPage(1);
+              }}
+              className={cn(
+                "flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium",
+                filter === option.value
+                  ? "border-[#6f84ba] bg-[#3c589e] text-white"
+                  : "border-[var(--border)] bg-white text-[var(--foreground)] hover:border-[#6f84ba] hover:bg-[#eef2fb]",
+              )}
+            >
+              <span>{option.label}</span>
+              <span
+                className={cn(
+                  "rounded-full px-2 py-0.5 text-xs font-semibold",
+                  filter === option.value
+                    ? "bg-white/18 text-white"
+                    : "bg-[#eef2fb] text-[#3c589e]",
+                )}
+              >
+                {option.count}
+              </span>
+            </button>
+          ))}
+        </div>
+
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex-1">
             <p className="font-mono text-xs uppercase tracking-[0.24em] text-[#3c589e]">Member directory</p>
@@ -62,30 +109,6 @@ export function MemberDirectory({ members }: { members: MemberWithVerification[]
             <div className="flex flex-wrap gap-2">
               <button onClick={() => setView("grid")} className={cn("rounded-full border px-4 py-2 text-sm font-medium", view === "grid" ? "border-[#6f84ba] bg-[#3c589e] text-white" : "border-[var(--border)] bg-white text-[var(--foreground)]")}>Grid</button>
               <button onClick={() => setView("list")} className={cn("rounded-full border px-4 py-2 text-sm font-medium", view === "list" ? "border-[#6f84ba] bg-[#3c589e] text-white" : "border-[var(--border)] bg-white text-[var(--foreground)]")}>List</button>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {[
-                ["all", "All members"],
-                ["verified", "Verified"],
-                ["pending", "Pending"],
-                ["shared", "Shared mobile"],
-              ].map(([value, label]) => (
-                <button
-                  key={value}
-                  onClick={() => {
-                    setFilter(value as typeof filter);
-                    setPage(1);
-                  }}
-                  className={cn(
-                    "rounded-full border px-4 py-2 text-sm font-medium",
-                    filter === value
-                      ? "border-[#6f84ba] bg-[#eef2fb] text-[#3c589e]"
-                      : "border-[var(--border)] bg-white text-[var(--foreground)]",
-                  )}
-                >
-                  {label}
-                </button>
-              ))}
             </div>
           </div>
         </div>
