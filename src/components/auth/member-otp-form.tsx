@@ -9,6 +9,7 @@ export function MemberOtpForm() {
   const [otp, setOtp] = useState(searchParams.get("previewCode") ?? "");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const previewCode = searchParams.get("previewCode") ?? "";
 
   const profileId = searchParams.get("profileId") ?? "";
   const identifier = searchParams.get("identifier") ?? "";
@@ -37,6 +38,12 @@ export function MemberOtpForm() {
 
   return (
     <form onSubmit={onSubmit} className="space-y-5">
+      {previewCode ? (
+        <div className="rounded-[22px] border border-amber-200 bg-amber-50 px-4 py-4 text-sm leading-6 text-amber-800">
+          Demo mode preview code: <span className="font-mono font-semibold tracking-[0.2em]">{previewCode}</span>
+        </div>
+      ) : null}
+
       <div>
         <label htmlFor="otp" className="mb-2 block text-sm font-medium text-[var(--foreground)]">
           OTP code
@@ -48,7 +55,7 @@ export function MemberOtpForm() {
           value={otp}
           onChange={(event) => setOtp(event.target.value)}
           placeholder="6 digit code"
-          className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-base tracking-[0.35em] text-[var(--foreground)] shadow-sm focus:border-rose-300"
+          className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-base tracking-[0.35em] text-[var(--foreground)] shadow-sm focus:border-rose-300 md:px-5 md:py-4 md:text-lg"
           required
         />
       </div>
