@@ -40,22 +40,24 @@ export function PortalShell({
               </p>
             </div>
 
-            <nav className="flex flex-wrap gap-2">
-              {nav.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={cn(
-                    "rounded-full border px-4 py-2 text-sm font-medium",
-                    pathname === item.href
-                      ? "border-rose-300 bg-rose-600 text-white shadow-sm"
-                      : "border-[var(--border)] bg-white/80 text-[var(--foreground)] hover:border-rose-300 hover:bg-rose-50",
-                  )}
-                >
-                  {item.label}
-                </Link>
-              ))}
-            </nav>
+            {nav.length ? (
+              <nav className="flex flex-wrap gap-2">
+                {nav.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={cn(
+                      "rounded-full border px-4 py-2 text-sm font-medium",
+                      pathname === item.href
+                        ? "border-rose-300 bg-rose-600 text-white shadow-sm"
+                        : "border-[var(--border)] bg-white/80 text-[var(--foreground)] hover:border-rose-300 hover:bg-rose-50",
+                    )}
+                  >
+                    {item.label}
+                  </Link>
+                ))}
+              </nav>
+            ) : null}
           </div>
         </header>
 
