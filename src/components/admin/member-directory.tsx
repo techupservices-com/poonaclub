@@ -148,24 +148,56 @@ export function MemberDirectory({ members }: { members: MemberWithVerification[]
 
       <div className={cn("grid gap-4", view === "grid" ? "md:grid-cols-2 xl:grid-cols-3" : "grid-cols-1")}>
         {pagedMembers.map((member) => (
-          <article key={member.id} className={cn("soft-card rounded-[24px] p-5", view === "list" && "md:flex md:items-start md:justify-between md:gap-6")}>
-            <div className="flex gap-4">
-              <AvatarBadge name={member.fullName} photoUrl={member.photoUrl} />
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="text-lg font-semibold text-[var(--foreground)]">{member.fullName}</h3>
-                  <StatusChip label={member.verification.completed ? "Verified" : "In progress"} tone={member.verification.completed ? "success" : "warning"} />
+          <article key={member.id} className={cn("soft-card rounded-[24px] p-5", view === "list" && "md:flex md:items-start md:justify-between md:gap-6")}> 
+            {view === "grid" ? (
+              <>
+                <div className="overflow-hidden rounded-[22px] border border-[var(--border)] bg-[#eef2fb]">
+                  <AvatarBadge
+                    name={member.fullName}
+                    photoUrl={member.photoUrl}
+                    className="h-56 w-full rounded-none ring-0"
+                  />
                 </div>
-                <p className="mt-1 text-sm text-[var(--muted)]">{member.membershipId} · {member.memberType}</p>
-                <p className="mt-3 text-sm text-[var(--muted)]">{member.email}</p>
-                <p className="mt-2 text-sm leading-6 text-[var(--muted)]">{member.address1}, {member.address2}, {member.city} {member.pincode}</p>
-                <p className="mt-2 text-sm text-[var(--foreground)]">{formatMobile(member.currentMobile)}</p>
+                <div className="mt-4 min-w-0">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <h3 className="text-xl font-semibold text-[var(--foreground)]">{member.fullName}</h3>
+                      <p className="mt-1 text-sm text-[var(--muted)]">{member.membershipId} · {member.memberType}</p>
+                    </div>
+                    <StatusChip label={member.verification.completed ? "Verified" : "In progress"} tone={member.verification.completed ? "success" : "warning"} />
+                  </div>
+                  <div className="mt-4 space-y-2 text-sm">
+                    <p className="text-[var(--muted)]">{member.email}</p>
+                    <p className="leading-6 text-[var(--muted)]">{member.address1}, {member.address2}, {member.city} {member.pincode}</p>
+                    <p className="font-medium text-[var(--foreground)]">{formatMobile(member.currentMobile)}</p>
+                  </div>
+                  <div className="mt-5 flex gap-2">
+                    <Link href={`/admin/members/${member.id}`} className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-medium text-[var(--foreground)] hover:border-[#6f84ba] hover:bg-[#eef2fb]">View</Link>
+                    <Link href={`/admin/members/${member.id}/edit`} className="rounded-full bg-stone-200 px-4 py-2 text-sm font-medium text-stone-700 hover:bg-stone-300">Edit</Link>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="flex gap-4">
+                <AvatarBadge name={member.fullName} photoUrl={member.photoUrl} />
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="text-lg font-semibold text-[var(--foreground)]">{member.fullName}</h3>
+                    <StatusChip label={member.verification.completed ? "Verified" : "In progress"} tone={member.verification.completed ? "success" : "warning"} />
+                  </div>
+                  <p className="mt-1 text-sm text-[var(--muted)]">{member.membershipId} · {member.memberType}</p>
+                  <p className="mt-3 text-sm text-[var(--muted)]">{member.email}</p>
+                  <p className="mt-2 text-sm leading-6 text-[var(--muted)]">{member.address1}, {member.address2}, {member.city} {member.pincode}</p>
+                  <p className="mt-2 text-sm text-[var(--foreground)]">{formatMobile(member.currentMobile)}</p>
+                </div>
               </div>
-            </div>
-            <div className="mt-4 flex gap-2 md:mt-0 md:flex-col">
-              <Link href={`/admin/members/${member.id}`} className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-medium text-[var(--foreground)] hover:border-[#6f84ba] hover:bg-[#eef2fb]">View</Link>
-              <Link href={`/admin/members/${member.id}/edit`} className="rounded-full bg-stone-200 px-4 py-2 text-sm font-medium text-stone-700 hover:bg-stone-300">Edit</Link>
-            </div>
+            )}
+            {view === "list" ? (
+              <div className="mt-4 flex gap-2 md:mt-0 md:flex-col">
+                <Link href={`/admin/members/${member.id}`} className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-medium text-[var(--foreground)] hover:border-[#6f84ba] hover:bg-[#eef2fb]">View</Link>
+                <Link href={`/admin/members/${member.id}/edit`} className="rounded-full bg-stone-200 px-4 py-2 text-sm font-medium text-stone-700 hover:bg-stone-300">Edit</Link>
+              </div>
+            ) : null}
           </article>
         ))}
       </div>
