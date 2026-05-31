@@ -11,7 +11,7 @@ import { cn, formatMobile } from "@/lib/utils";
 export function MemberDirectory({ members }: { members: MemberWithVerification[] }) {
   const [query, setQuery] = useState("");
   const [view, setView] = useState<"grid" | "list">("grid");
-  const [filter, setFilter] = useState<"all" | "verified" | "pending" | "shared">("all");
+  const [filters, setFilters] = useState<Array<"verified" | "pending" | "shared">>([]);
   const [page, setPage] = useState(1);
 
   const filterCounts = useMemo(
@@ -25,7 +25,6 @@ export function MemberDirectory({ members }: { members: MemberWithVerification[]
   );
 
   const filterOptions = [
-    { value: "all", label: "All members", count: filterCounts.all },
     { value: "verified", label: "Verified", count: filterCounts.verified },
     { value: "pending", label: "Pending", count: filterCounts.pending },
     { value: "shared", label: "Shared mobile", count: filterCounts.shared },
@@ -42,14 +41,17 @@ export function MemberDirectory({ members }: { members: MemberWithVerification[]
           .includes(value);
 
       const matchesFilter =
-        filter === "all" ||
-        (filter === "verified" && member.verification.completed) ||
-        (filter === "pending" && !member.verification.completed) ||
-        (filter === "shared" && member.linkedMemberCount > 1);
+        filters.length === 0 ||
+        filters.every((filter) => {
+          if (filter === "verified") return member.verification.completed;
+          if (filter === "pending") return !member.verification.completed;
+          if (filter === "shared") return member.linkedMemberCount > 1;
+          return true;
+        });
 
       return matchesQuery && matchesFilter;
     });
-  }, [filter, members, query]);
+  }, [filters, members, query]);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, pageCount);
@@ -59,16 +61,43 @@ export function MemberDirectory({ members }: { members: MemberWithVerification[]
     <div className="grid gap-5">
       <div className="shell-panel rounded-[24px] p-4 md:p-5">
         <div className="mb-4 flex flex-wrap gap-2">
+          <button
+            onClick={() => {
+              setFilters([]);
+              setPage(1);
+            }}
+            className={cn(
+              "flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium",
+              filters.length === 0
+                ? "border-[#6f84ba] bg-[#3c589e] text-white"
+                : "border-[var(--border)] bg-white text-[var(--foreground)] hover:border-[#6f84ba] hover:bg-[#eef2fb]",
+            )}
+          >
+            <span>All members</span>
+            <span
+              className={cn(
+                "rounded-full px-2 py-0.5 text-xs font-semibold",
+                filters.length === 0 ? "bg-white/18 text-white" : "bg-[#eef2fb] text-[#3c589e]",
+              )}
+            >
+              {filterCounts.all}
+            </span>
+          </button>
+
           {filterOptions.map((option) => (
             <button
               key={option.value}
               onClick={() => {
-                setFilter(option.value);
+                setFilters((current) =>
+                  current.includes(option.value)
+                    ? current.filter((value) => value !== option.value)
+                    : [...current, option.value],
+                );
                 setPage(1);
               }}
               className={cn(
                 "flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium",
-                filter === option.value
+                filters.includes(option.value)
                   ? "border-[#6f84ba] bg-[#3c589e] text-white"
                   : "border-[var(--border)] bg-white text-[var(--foreground)] hover:border-[#6f84ba] hover:bg-[#eef2fb]",
               )}
@@ -77,7 +106,7 @@ export function MemberDirectory({ members }: { members: MemberWithVerification[]
               <span
                 className={cn(
                   "rounded-full px-2 py-0.5 text-xs font-semibold",
-                  filter === option.value
+                  filters.includes(option.value)
                     ? "bg-white/18 text-white"
                     : "bg-[#eef2fb] text-[#3c589e]",
                 )}
@@ -104,6 +133,9 @@ export function MemberDirectory({ members }: { members: MemberWithVerification[]
               placeholder="Search members"
               className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-[var(--foreground)]"
             />
+            <p className="mt-2 text-xs text-[var(--muted)]">
+              Combine filters to narrow the list, such as pending members with shared mobile numbers.
+            </p>
           </div>
           <div className="flex flex-col gap-3 lg:items-end">
             <div className="flex flex-wrap gap-2">
