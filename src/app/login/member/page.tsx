@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { MemberLoginForm } from "@/components/auth/member-login-form";
 
 export default function MemberLoginPage() {
@@ -16,7 +15,6 @@ export default function MemberLoginPage() {
             <p>2. Verify the OTP sent on WhatsApp.</p>
             <p>3. Complete your profile, uploads, and linked member cleanup.</p>
           </div>
-          <Link href="/login/admin" className="mt-8 inline-flex text-sm font-medium text-rose-700 underline underline-offset-4">Admin sign in instead</Link>
         </section>
 
         <section className="soft-card rounded-[30px] p-6 md:p-8">
