@@ -1,6 +1,6 @@
 import Image from "next/image";
+import { User } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getInitials } from "@/lib/utils";
 
 export function AvatarBadge({
   name,
@@ -21,7 +21,9 @@ export function AvatarBadge({
       {photoUrl ? (
         <Image src={photoUrl} alt={`${name} profile`} fill unoptimized className="object-cover" />
       ) : (
-        <span className="relative z-10">{getInitials(name)}</span>
+        <span className="relative z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/85 text-[#3c589e] shadow-sm">
+          <User className="h-5 w-5" />
+        </span>
       )}
     </div>
   );

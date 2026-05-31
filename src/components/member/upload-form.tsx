@@ -4,6 +4,8 @@ import { useState } from "react";
 
 export function UploadForm() {
   const [message, setMessage] = useState<string | null>(null);
+  const [selfieFileName, setSelfieFileName] = useState("No file chosen");
+  const [documentFileName, setDocumentFileName] = useState("No file chosen");
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -16,7 +18,11 @@ export function UploadForm() {
     });
     const payload = await response.json();
     setMessage(response.ok ? payload.message : payload.error);
-    if (response.ok) form.reset();
+    if (response.ok) {
+      form.reset();
+      setSelfieFileName("No file chosen");
+      setDocumentFileName("No file chosen");
+    }
   }
 
   return (
@@ -26,11 +32,45 @@ export function UploadForm() {
       </div>
       <label className="grid gap-2 text-sm text-[var(--muted)]">
         Selfie photo
-        <input type="file" name="selfie" accept="image/*" className="rounded-2xl border border-dashed border-[var(--border)] bg-white px-4 py-3 text-[var(--foreground)]" required />
+        <input
+          type="text"
+          value={selfieFileName}
+          readOnly
+          className="rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-[var(--foreground)]"
+        />
+        <input
+          id="selfie"
+          type="file"
+          name="selfie"
+          accept="image/*"
+          className="hidden"
+          onChange={(event) => setSelfieFileName(event.target.files?.[0]?.name ?? "No file chosen")}
+          required
+        />
+        <label htmlFor="selfie" className="inline-flex w-fit rounded-2xl bg-[#3c589e] px-4 py-3 text-sm font-semibold text-white hover:bg-[#2f467e]">
+          Choose file
+        </label>
       </label>
       <label className="grid gap-2 text-sm text-[var(--muted)]">
         Supporting document
-        <input type="file" name="document" accept="image/*,.pdf" className="rounded-2xl border border-dashed border-[var(--border)] bg-white px-4 py-3 text-[var(--foreground)]" required />
+        <input
+          type="text"
+          value={documentFileName}
+          readOnly
+          className="rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-[var(--foreground)]"
+        />
+        <input
+          id="document"
+          type="file"
+          name="document"
+          accept="image/*,.pdf"
+          className="hidden"
+          onChange={(event) => setDocumentFileName(event.target.files?.[0]?.name ?? "No file chosen")}
+          required
+        />
+        <label htmlFor="document" className="inline-flex w-fit rounded-2xl bg-[#3c589e] px-4 py-3 text-sm font-semibold text-white hover:bg-[#2f467e]">
+          Choose file
+        </label>
       </label>
       <div className="md:col-span-2 flex items-center justify-between gap-4 pt-2">
         <p className="text-sm text-[var(--muted)]">{message ?? "Accepted formats: images for selfie, images or PDF for supporting document."}</p>
