@@ -38,6 +38,7 @@ export default async function MemberLayout({ children }: { children: React.React
       title="Member verification"
       subtitle="Complete the remaining steps below to finish your club verification. Each card tells you exactly what is done and what still needs your action."
       nav={nav}
+      dashboardHref="/member"
       headerAside={
         <div className="w-full rounded-[26px] border border-[#d7e0f4] bg-white/95 px-5 py-5 shadow-sm lg:w-[420px] xl:w-[460px]">
           <div className="flex items-start justify-between gap-4">

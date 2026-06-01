@@ -15,12 +15,14 @@ export function PortalShell({
   subtitle,
   nav,
   headerAside,
+  dashboardHref,
   children,
 }: {
   title: string;
   subtitle: string;
   nav: NavItem[];
   headerAside?: React.ReactNode;
+  dashboardHref?: string;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -66,13 +68,21 @@ export function PortalShell({
           </div>
         </header>
 
-        <div>
+        <div className="flex flex-wrap gap-3">
           <Link
             href="/"
             className="inline-flex rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--foreground)] hover:border-[#6f84ba] hover:bg-[#eef2fb]"
           >
             Back to homepage
           </Link>
+          {dashboardHref && pathname !== dashboardHref ? (
+            <Link
+              href={dashboardHref}
+              className="inline-flex rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--foreground)] hover:border-[#6f84ba] hover:bg-[#eef2fb]"
+            >
+              Back to dashboard
+            </Link>
+          ) : null}
         </div>
 
         <main className="grid gap-6">{children}</main>
