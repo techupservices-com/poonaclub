@@ -187,7 +187,13 @@ export function UploadForm() {
         <button className="rounded-2xl bg-[#3c589e] px-4 py-3 text-sm font-semibold text-white hover:bg-[#2f467e]">
           Upload files
         </button>
-        <p className="text-sm text-[var(--muted)] md:text-right">
+        <p
+          className={`text-sm md:text-right ${
+            message && !message.toLowerCase().includes("upload")
+              ? "font-semibold text-red-600"
+              : "text-[var(--muted)]"
+          }`}
+        >
           {message ?? "Accepted formats: images for selfie, images or PDF for supporting document."}
         </p>
       </div>
