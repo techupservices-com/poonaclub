@@ -14,6 +14,10 @@ export default async function MemberDashboardPage() {
 
   const linkedMembers = await getLinkedMembers(member.id);
   const documents = await listDocuments(member.id);
+  const orderedDocuments = [...documents].sort((left, right) => {
+    if (left.documentType === right.documentType) return 0;
+    return left.documentType === "selfie" ? -1 : 1;
+  });
   const profilePhotoUrl = await getMemberProfilePhotoUrl(member.id, member.photoUrl);
   const requiresLinkedMemberCleanup =
     linkedMembers.length > 1 && linkedMembers.some((entry) => !entry.mobileVerified);
@@ -174,21 +178,21 @@ export default async function MemberDashboardPage() {
             ) : null}
           </div>
         </div>
-      </section>
 
-      {documents.length ? (
-        <section className="soft-card rounded-[28px] p-6">
-          <h3 className="text-xl font-semibold">Uploaded documents</h3>
-          <div className="mt-4 grid gap-3 md:grid-cols-2">
-            {documents.map((document) => (
-              <div key={document.id} className="rounded-[22px] border border-[var(--border)] bg-white px-4 py-4">
-                <p className="font-medium capitalize">{document.documentType}</p>
-                <p className="text-sm text-[var(--muted)]">{document.fileName}</p>
-              </div>
-            ))}
+        {orderedDocuments.length ? (
+          <div className="soft-card rounded-[28px] p-6">
+            <h3 className="text-xl font-semibold">Uploaded documents</h3>
+            <div className="mt-4 grid gap-3">
+              {orderedDocuments.map((document) => (
+                <div key={document.id} className="rounded-[22px] border border-[var(--border)] bg-white px-4 py-4">
+                  <p className="font-medium capitalize">{document.documentType}</p>
+                  <p className="text-sm text-[var(--muted)]">{document.fileName}</p>
+                </div>
+              ))}
+            </div>
           </div>
-        </section>
-      ) : null}
+        ) : null}
+      </section>
     </>
   );
 }
