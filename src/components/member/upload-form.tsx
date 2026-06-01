@@ -55,7 +55,7 @@ export function UploadForm() {
       <div className="md:col-span-2 rounded-[22px] border border-amber-200 bg-amber-50 px-4 py-4 text-sm leading-6 text-amber-900">
         Upload one clear selfie and one supporting document. Both are required before your membership can be marked verified.
       </div>
-      <label className="grid gap-2 text-sm text-[var(--muted)]">
+      <label className="flex flex-col gap-2 text-sm text-[var(--muted)]">
         Selfie photo
         <input
           type="text"
@@ -81,11 +81,11 @@ export function UploadForm() {
           Choose file
         </label>
         {selfiePreviewUrl ? (
-          <div className="mt-2 grid gap-3">
-            <div className="relative aspect-[4/5] overflow-hidden rounded-[22px] border border-[var(--border)] bg-[#eef2fb]">
+          <div className="mt-2 flex max-w-[220px] flex-col gap-3">
+            <div className="relative aspect-square overflow-hidden rounded-[22px] border border-[var(--border)] bg-[#eef2fb] sm:aspect-[4/5]">
               <Image src={selfiePreviewUrl} alt="Selected selfie preview" fill unoptimized className="object-cover" />
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <label htmlFor="selfie" className="inline-flex w-fit rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm font-semibold text-[var(--foreground)] hover:border-[#6f84ba] hover:bg-[#eef2fb]">
                 Replace file
               </label>
@@ -100,7 +100,7 @@ export function UploadForm() {
           </div>
         ) : null}
       </label>
-      <label className="grid gap-2 text-sm text-[var(--muted)]">
+      <label className="flex flex-col gap-2 text-sm text-[var(--muted)]">
         Supporting document
         <input
           type="text"
@@ -134,11 +134,11 @@ export function UploadForm() {
         </label>
         {documentPreviewUrl ? (
           documentIsImage ? (
-            <div className="mt-2 grid gap-3">
-              <div className="relative aspect-[4/5] overflow-hidden rounded-[22px] border border-[var(--border)] bg-[#eef2fb]">
+            <div className="mt-2 flex max-w-[220px] flex-col gap-3">
+              <div className="relative aspect-square overflow-hidden rounded-[22px] border border-[var(--border)] bg-[#eef2fb] sm:aspect-[4/5]">
                 <Image src={documentPreviewUrl} alt="Selected supporting document preview" fill unoptimized className="object-cover" />
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <label htmlFor="document" className="inline-flex w-fit rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm font-semibold text-[var(--foreground)] hover:border-[#6f84ba] hover:bg-[#eef2fb]">
                   Replace file
                 </label>
@@ -152,12 +152,12 @@ export function UploadForm() {
               </div>
             </div>
           ) : (
-            <div className="mt-2 grid gap-3">
+            <div className="mt-2 flex max-w-[220px] flex-col gap-3">
               <div className="rounded-[22px] border border-[var(--border)] bg-[#eef2fb] px-4 py-5 text-sm text-[#24345f]">
                 <p className="font-semibold">Document selected</p>
                 <p className="mt-1 break-all text-[var(--muted)]">{documentFileName}</p>
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <label htmlFor="document" className="inline-flex w-fit rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm font-semibold text-[var(--foreground)] hover:border-[#6f84ba] hover:bg-[#eef2fb]">
                   Replace file
                 </label>
