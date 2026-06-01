@@ -60,12 +60,9 @@ export default async function MemberDashboardPage() {
       : []),
   ];
 
-  const completedSteps = steps.filter((step) => step.done).length;
-  const nextPendingStep = steps.find((step) => !step.done);
-
   return (
     <>
-      <section className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+      <section className="grid gap-4">
         <div className="soft-card rounded-[28px] p-6">
           <div className="flex flex-col gap-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -119,32 +116,8 @@ export default async function MemberDashboardPage() {
                   <p className="text-sm text-[var(--muted)]">City / Pincode</p>
                   <p className="mt-1 font-semibold text-[var(--foreground)]">{member.city || "-"} {member.pincode || ""}</p>
                 </div>
-                <div className="rounded-[22px] border border-[var(--border)] bg-white px-4 py-4 md:col-span-2">
-                  <p className="text-sm text-[var(--muted)]">What to do next</p>
-                  <p className="mt-1 text-sm leading-6 text-[var(--foreground)]">
-                    Follow the steps below one by one. Completed steps are clearly marked, and incomplete steps take you straight to the page where you can finish them.
-                  </p>
-                </div>
               </div>
             </div>
-          </div>
-        </div>
-
-        <div className="soft-card rounded-[28px] p-6">
-          <p className="font-mono text-xs uppercase tracking-[0.24em] text-[#3c589e]">Verification progress</p>
-          <p className="mt-3 text-4xl font-semibold">{completedSteps}/{steps.length}</p>
-          <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
-            {member.verification.completed
-              ? "All required steps are complete. Your membership is verified."
-              : nextPendingStep
-                ? `Next step: ${nextPendingStep.title}`
-                : "Review your details below."}
-          </p>
-          <div className="mt-5 h-3 overflow-hidden rounded-full bg-[#dfe6f8]">
-            <div
-              className="h-full rounded-full bg-[#3c589e]"
-              style={{ width: `${Math.max(8, (completedSteps / steps.length) * 100)}%` }}
-            />
           </div>
         </div>
       </section>

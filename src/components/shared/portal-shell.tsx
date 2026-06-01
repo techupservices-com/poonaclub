@@ -14,11 +14,13 @@ export function PortalShell({
   title,
   subtitle,
   nav,
+  headerAside,
   children,
 }: {
   title: string;
   subtitle: string;
   nav: NavItem[];
+  headerAside?: React.ReactNode;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -27,7 +29,7 @@ export function PortalShell({
     <div className="min-h-screen px-4 py-4 md:px-6 md:py-6">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
         <header className="shell-panel rounded-[28px] px-5 py-5 md:px-7">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
               <p className="font-mono text-xs uppercase tracking-[0.3em] text-[#3c589e]">
                 {APP_NAME}
@@ -40,24 +42,27 @@ export function PortalShell({
               </p>
             </div>
 
-            {nav.length ? (
-              <nav className="flex flex-wrap gap-2">
-                {nav.map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={cn(
-                      "rounded-full border px-4 py-2 text-sm font-medium",
-                      pathname === item.href
-                        ? "border-[#6f84ba] bg-[#3c589e] text-white shadow-sm"
-                        : "border-[var(--border)] bg-white/80 text-[var(--foreground)] hover:border-[#6f84ba] hover:bg-[#eef2fb]",
-                    )}
-                  >
-                    {item.label}
-                  </Link>
-                ))}
-              </nav>
-            ) : null}
+            <div className="flex flex-col gap-3 lg:items-end">
+              {headerAside}
+              {nav.length ? (
+                <nav className="flex flex-wrap gap-2">
+                  {nav.map((item) => (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={cn(
+                        "rounded-full border px-4 py-2 text-sm font-medium",
+                        pathname === item.href
+                          ? "border-[#6f84ba] bg-[#3c589e] text-white shadow-sm"
+                          : "border-[var(--border)] bg-white/80 text-[var(--foreground)] hover:border-[#6f84ba] hover:bg-[#eef2fb]",
+                      )}
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
+                </nav>
+              ) : null}
+            </div>
           </div>
         </header>
 
