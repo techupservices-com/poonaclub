@@ -18,6 +18,7 @@ interface UploadedFileItem {
 export function ExistingUploadedFiles({ items }: { items: UploadedFileItem[] }) {
   const router = useRouter();
   const [busyType, setBusyType] = useState<"selfie" | "document" | null>(null);
+  const [brokenPreviews, setBrokenPreviews] = useState<Record<string, boolean>>({});
   const sectionRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -44,7 +45,7 @@ export function ExistingUploadedFiles({ items }: { items: UploadedFileItem[] }) 
     <div ref={sectionRef} className="mt-5 grid gap-4 md:grid-cols-2">
       {items.map((item) => (
         <div key={item.id} className="rounded-[22px] border border-[var(--border)] bg-white p-4">
-          {item.previewUrl ? (
+          {item.previewUrl && !brokenPreviews[item.id] ? (
             <div className="relative mb-4 aspect-square max-w-[220px] overflow-hidden rounded-[18px] bg-[#eef2fb] sm:aspect-[4/5]">
               <Image
                 src={item.previewUrl}
@@ -52,11 +53,17 @@ export function ExistingUploadedFiles({ items }: { items: UploadedFileItem[] }) 
                 fill
                 unoptimized
                 className="object-cover"
+                onError={() =>
+                  setBrokenPreviews((current) => ({
+                    ...current,
+                    [item.id]: true,
+                  }))
+                }
               />
             </div>
           ) : (
             <div className="mb-4 max-w-[220px] rounded-[18px] border border-[var(--border)] bg-[#eef2fb] px-4 py-5 text-sm text-[#24345f]">
-              <p className="font-semibold">Document selected</p>
+              <p className="font-semibold">Preview unavailable</p>
               <p className="mt-1 break-all text-[var(--muted)]">{item.fileName}</p>
             </div>
           )}
