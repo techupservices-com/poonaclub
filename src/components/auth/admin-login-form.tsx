@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 
 export function AdminLoginForm() {
   const router = useRouter();
-  const [email, setEmail] = useState("admin@techiemiran.in");
-  const [password, setPassword] = useState("Admin@2204");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -43,6 +43,8 @@ export function AdminLoginForm() {
           type="email"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
+          autoComplete="username"
+          placeholder="Enter admin email"
           className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-base text-[var(--foreground)] shadow-sm focus:border-[#6f84ba]"
           required
         />
@@ -57,6 +59,8 @@ export function AdminLoginForm() {
           type="password"
           value={password}
           onChange={(event) => setPassword(event.target.value)}
+          autoComplete="current-password"
+          placeholder="Enter password"
           className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-base text-[var(--foreground)] shadow-sm focus:border-[#6f84ba]"
           required
         />
