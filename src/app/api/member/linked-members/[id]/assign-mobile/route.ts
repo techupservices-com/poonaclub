@@ -35,6 +35,8 @@ export async function POST(request: Request, context: RouteContext<"/api/member/
 
   return Response.json({
     message: `Verification message sent for ${member.fullName}.`,
+    requestId: requestRecord.id,
+    mobile: normalized,
     previewCode: "previewCode" in delivery ? delivery.previewCode : undefined,
   });
 }

@@ -1,12 +1,17 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { MemberWithVerification } from "@/lib/types";
 import { formatMobile } from "@/lib/utils";
 import { StatusChip } from "@/components/shared/status-chip";
 
 export function LinkedMemberManager({ members }: { members: MemberWithVerification[] }) {
+  const router = useRouter();
   const [messages, setMessages] = useState<Record<string, string>>({});
+  const [pendingRequests, setPendingRequests] = useState<
+    Record<string, { requestId: string; mobile: string; previewCode?: string; otp: string }>
+  >({});
 
   async function onAssign(profileId: string, formData: FormData) {
     const mobile = String(formData.get("newMobile") ?? "");
@@ -16,12 +21,49 @@ export function LinkedMemberManager({ members }: { members: MemberWithVerificati
       body: JSON.stringify({ newMobile: mobile }),
     });
     const payload = await response.json();
+    if (response.ok) {
+      setPendingRequests((current) => ({
+        ...current,
+        [profileId]: {
+          requestId: payload.requestId,
+          mobile: payload.mobile,
+          previewCode: payload.previewCode,
+          otp: payload.previewCode ?? "",
+        },
+      }));
+    }
     setMessages((current) => ({
       ...current,
       [profileId]: response.ok
         ? `${payload.message}${payload.previewCode ? ` Demo OTP: ${payload.previewCode}` : ""}`
         : payload.error,
     }));
+  }
+
+  async function verifyLinkedMember(profileId: string) {
+    const request = pendingRequests[profileId];
+    if (!request) return;
+
+    const response = await fetch("/api/member/linked-members/verify-mobile", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ requestId: request.requestId, otp: request.otp }),
+    });
+    const payload = await response.json();
+
+    setMessages((current) => ({
+      ...current,
+      [profileId]: response.ok ? payload.message : payload.error,
+    }));
+
+    if (response.ok) {
+      setPendingRequests((current) => {
+        const next = { ...current };
+        delete next[profileId];
+        return next;
+      });
+      router.refresh();
+    }
   }
 
   return (
@@ -70,6 +112,42 @@ export function LinkedMemberManager({ members }: { members: MemberWithVerificati
 
           {messages[member.id] ? (
             <p className="mt-3 text-sm text-[var(--muted)]">{messages[member.id]}</p>
+          ) : null}
+
+          {pendingRequests[member.id] ? (
+            <div className="mt-4 rounded-[22px] border border-[var(--border)] bg-white px-4 py-4">
+              <p className="text-sm font-semibold text-[var(--foreground)]">
+                Verify OTP sent to {formatMobile(pendingRequests[member.id].mobile)}
+              </p>
+              {pendingRequests[member.id].previewCode ? (
+                <p className="mt-2 text-sm text-[var(--muted)]">
+                  Demo OTP: {pendingRequests[member.id].previewCode}
+                </p>
+              ) : null}
+              <div className="mt-3 flex flex-col gap-3 md:flex-row">
+                <input
+                  value={pendingRequests[member.id].otp}
+                  onChange={(event) =>
+                    setPendingRequests((current) => ({
+                      ...current,
+                      [member.id]: {
+                        ...current[member.id],
+                        otp: event.target.value,
+                      },
+                    }))
+                  }
+                  placeholder="Enter 6-digit OTP"
+                  className="min-w-0 flex-1 rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-[var(--foreground)]"
+                />
+                <button
+                  type="button"
+                  onClick={() => void verifyLinkedMember(member.id)}
+                  className="rounded-2xl bg-[#3c589e] px-4 py-3 text-sm font-semibold text-white hover:bg-[#2f467e]"
+                >
+                  Verify member OTP
+                </button>
+              </div>
+            </div>
           ) : null}
         </div>
       ))}
