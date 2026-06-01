@@ -29,7 +29,7 @@ export function PortalShell({
 
   return (
     <div className="min-h-screen px-4 py-4 md:px-6 md:py-6">
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-4">
         <header className="shell-panel rounded-[28px] px-5 py-5 md:px-7">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
@@ -68,18 +68,18 @@ export function PortalShell({
           </div>
         </header>
 
-        <div className="flex flex-wrap gap-3">
-          {dashboardHref && pathname !== dashboardHref ? (
+        {dashboardHref && pathname !== dashboardHref ? (
+          <div className="flex flex-wrap gap-3">
             <Link
               href={dashboardHref}
               className="inline-flex rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--foreground)] hover:border-[#6f84ba] hover:bg-[#eef2fb]"
             >
               Back to dashboard
             </Link>
-          ) : null}
-        </div>
+          </div>
+        ) : null}
 
-        <main className="grid gap-6">{children}</main>
+        <main className="grid gap-4">{children}</main>
       </div>
     </div>
   );
