@@ -9,14 +9,16 @@ import { StatusChip } from "@/components/shared/status-chip";
 export function LinkedMemberManager({ members }: { members: MemberWithVerification[] }) {
   const router = useRouter();
   const [messages, setMessages] = useState<Record<string, string>>({});
-  const [busyProfileId, setBusyProfileId] = useState<string | null>(null);
+  const [assigningProfileId, setAssigningProfileId] = useState<string | null>(null);
+  const [verifyingProfileId, setVerifyingProfileId] = useState<string | null>(null);
+  const [draftMobiles, setDraftMobiles] = useState<Record<string, string>>({});
   const [pendingRequests, setPendingRequests] = useState<
     Record<string, { requestId: string; mobile: string; previewCode?: string; otp: string }>
   >({});
 
-  async function onAssign(profileId: string, formData: FormData) {
-    setBusyProfileId(profileId);
-    const mobile = String(formData.get("newMobile") ?? "");
+  async function onAssign(profileId: string) {
+    setAssigningProfileId(profileId);
+    const mobile = draftMobiles[profileId] ?? "";
     try {
       const response = await fetch(`/api/member/linked-members/${profileId}/assign-mobile`, {
         method: "POST",
@@ -34,6 +36,10 @@ export function LinkedMemberManager({ members }: { members: MemberWithVerificati
             otp: payload.previewCode ?? "",
           },
         }));
+        setDraftMobiles((current) => ({
+          ...current,
+          [profileId]: payload.mobile,
+        }));
       }
       setMessages((current) => ({
         ...current,
@@ -42,14 +48,14 @@ export function LinkedMemberManager({ members }: { members: MemberWithVerificati
           : payload.error,
       }));
     } finally {
-      setBusyProfileId(null);
+      setAssigningProfileId(null);
     }
   }
 
   async function verifyLinkedMember(profileId: string) {
     const request = pendingRequests[profileId];
     if (!request) return;
-    setBusyProfileId(profileId);
+    setVerifyingProfileId(profileId);
 
     try {
       const response = await fetch("/api/member/linked-members/verify-mobile", {
@@ -70,10 +76,15 @@ export function LinkedMemberManager({ members }: { members: MemberWithVerificati
           delete next[profileId];
           return next;
         });
+        setDraftMobiles((current) => {
+          const next = { ...current };
+          delete next[profileId];
+          return next;
+        });
         router.refresh();
       }
     } finally {
-      setBusyProfileId(null);
+      setVerifyingProfileId(null);
     }
   }
 
@@ -105,23 +116,32 @@ export function LinkedMemberManager({ members }: { members: MemberWithVerificati
           {!member.mobileVerified ? (
             <form
               className="mt-4 grid gap-3 rounded-[22px] border border-[var(--border)] bg-white px-4 py-4"
-              action={(formData) => {
-                void onAssign(member.id, formData);
+              onSubmit={(event) => {
+                event.preventDefault();
+                void onAssign(member.id);
               }}
             >
               <p className="font-mono text-xs uppercase tracking-[0.22em] text-[#3c589e]">Step 1</p>
               <div className="flex flex-col gap-3 md:flex-row">
                 <input
                   name="newMobile"
+                  value={draftMobiles[member.id] ?? ""}
+                  onChange={(event) =>
+                    setDraftMobiles((current) => ({
+                      ...current,
+                      [member.id]: event.target.value,
+                    }))
+                  }
                   placeholder="Enter new mobile number"
                   className="min-w-0 flex-1 rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-[var(--foreground)]"
+                  disabled={Boolean(pendingRequests[member.id]) || assigningProfileId === member.id}
                   required
                 />
                 <button
-                  disabled={busyProfileId === member.id}
+                  disabled={assigningProfileId === member.id || Boolean(pendingRequests[member.id])}
                   className="rounded-2xl bg-[#3c589e] px-4 py-3 text-sm font-semibold text-white hover:bg-[#2f467e] disabled:opacity-60"
                 >
-                  {busyProfileId === member.id ? "Sending OTP..." : "Send member OTP"}
+                  {assigningProfileId === member.id ? "Sending OTP..." : "Send member OTP"}
                 </button>
               </div>
               <p className="text-sm leading-6 text-[var(--muted)]">
@@ -165,11 +185,11 @@ export function LinkedMemberManager({ members }: { members: MemberWithVerificati
                 />
                 <button
                   type="button"
-                  disabled={busyProfileId === member.id}
+                  disabled={verifyingProfileId === member.id}
                   onClick={() => void verifyLinkedMember(member.id)}
                   className="rounded-2xl bg-[#3c589e] px-4 py-3 text-sm font-semibold text-white hover:bg-[#2f467e] disabled:opacity-60"
                 >
-                  {busyProfileId === member.id ? "Verifying..." : "Verify member OTP"}
+                  {verifyingProfileId === member.id ? "Verifying..." : "Verify member OTP"}
                 </button>
               </div>
             </div>
