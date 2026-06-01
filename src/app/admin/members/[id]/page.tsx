@@ -10,7 +10,10 @@ export default async function AdminMemberDetailPage({ params }: { params: Promis
   const member = await getMemberById(id);
   if (!member) notFound();
 
-  const documents = await listDocuments(id);
+  const documents = (await listDocuments(id)).sort((left, right) => {
+    if (left.documentType === right.documentType) return 0;
+    return left.documentType === "selfie" ? -1 : 1;
+  });
 
   return (
     <section className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
@@ -46,7 +49,7 @@ export default async function AdminMemberDetailPage({ params }: { params: Promis
         <p className="font-mono text-xs uppercase tracking-[0.24em] text-[#3c589e]">Verification review</p>
         <h3 className="mt-2 text-xl font-semibold">Documents and checklist</h3>
         <p className="mt-2 text-sm leading-6 text-[var(--muted)]">This panel shows what the system has marked complete and what is still missing for full verification.</p>
-        <div className="mt-4 space-y-3">
+        <div className="mt-4 flex flex-wrap gap-3">
           <StatusChip label={member.verification.mobileVerified ? "Mobile verified" : "Mobile pending"} tone={member.verification.mobileVerified ? "success" : "warning"} />
           <StatusChip label={member.verification.profileConfirmed ? "Profile complete" : "Profile incomplete"} tone={member.verification.profileConfirmed ? "success" : "warning"} />
           <StatusChip label={member.verification.selfieUploaded ? "Selfie uploaded" : "Selfie missing"} tone={member.verification.selfieUploaded ? "success" : "warning"} />
