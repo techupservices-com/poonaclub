@@ -63,20 +63,28 @@ export default async function MemberDashboardPage() {
   return (
     <>
       <section className="grid gap-4">
-        <div className="soft-card rounded-[28px] p-6">
-          <div className="flex flex-col gap-5">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <h2 className="text-2xl font-semibold">{member.fullName}</h2>
-                <StatusChip label={member.verification.completed ? "Membership verified" : "Action needed"} tone={member.verification.completed ? "success" : "warning"} />
+        <div className="soft-card rounded-[30px] p-5 md:p-6">
+          <div className="flex flex-col gap-6">
+            <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[var(--border)] pb-5">
+              <div>
+                <p className="font-mono text-xs uppercase tracking-[0.24em] text-[#3c589e]">Member record</p>
+                <h2 className="mt-2 text-3xl font-semibold tracking-[-0.03em] text-[var(--foreground)] md:text-4xl">
+                  {member.fullName}
+                </h2>
+                <p className="mt-2 text-sm text-[var(--muted)]">{member.membershipId} · {member.memberType}</p>
               </div>
-              <p className="text-sm text-[var(--muted)]">{member.membershipId} · {member.memberType}</p>
+              <div className="flex flex-col items-start gap-3 md:items-end">
+                <StatusChip label={member.verification.completed ? "Membership verified" : "Action needed"} tone={member.verification.completed ? "success" : "warning"} />
+                <p className="max-w-xs text-sm leading-6 text-[var(--muted)] md:text-right">
+                  Review the details below and complete any pending steps to finish your verification.
+                </p>
+              </div>
             </div>
 
-            <div className="grid gap-5 lg:grid-cols-[180px_1fr] lg:items-start">
+            <div className="grid gap-5 lg:grid-cols-[200px_1fr] lg:items-start">
               <Link
                 href="/member/uploads"
-                className="group relative flex aspect-[4/5] w-full items-center justify-center overflow-hidden rounded-[26px] border border-[var(--border)] bg-[#eef2fb]"
+                className="group relative flex aspect-[4/5] w-full items-center justify-center overflow-hidden rounded-[28px] border border-[var(--border)] bg-[#eef2fb] shadow-sm"
               >
                 {profilePhotoUrl ? (
                   <Image
@@ -87,11 +95,11 @@ export default async function MemberDashboardPage() {
                     className="object-cover"
                   />
                 ) : (
-                  <div className="flex h-full w-full flex-col items-center justify-center gap-3 text-[#3c589e]">
-                    <span className="flex h-16 w-16 items-center justify-center rounded-full bg-white shadow-sm">
-                      <Camera className="h-7 w-7" />
+                  <div className="flex h-full w-full flex-col items-center justify-center gap-4 text-[#3c589e]">
+                    <span className="flex h-18 w-18 items-center justify-center rounded-full bg-white shadow-sm">
+                      <Camera className="h-8 w-8" />
                     </span>
-                    <span className="text-sm font-semibold">Set profile photo</span>
+                    <span className="text-sm font-semibold tracking-[0.01em]">Set profile photo</span>
                   </div>
                 )}
                 <span className="absolute inset-x-3 bottom-3 rounded-full bg-white/92 px-3 py-2 text-center text-xs font-semibold text-[#24345f] shadow-sm transition group-hover:bg-white">
@@ -100,21 +108,23 @@ export default async function MemberDashboardPage() {
               </Link>
 
               <div className="grid gap-3 md:grid-cols-2">
-                <div className="rounded-[22px] border border-[var(--border)] bg-white px-4 py-4">
-                  <p className="text-sm text-[var(--muted)]">Registered mobile</p>
-                  <p className="mt-1 font-semibold text-[var(--foreground)]">{formatMobile(member.currentMobile)}</p>
+                <div className="rounded-[24px] border border-[var(--border)] bg-white px-4 py-4 md:px-5">
+                  <p className="text-xs font-medium uppercase tracking-[0.18em] text-[var(--muted)]">Registered mobile</p>
+                  <p className="mt-2 text-base font-semibold text-[var(--foreground)] md:text-lg">{formatMobile(member.currentMobile)}</p>
                 </div>
-                <div className="rounded-[22px] border border-[var(--border)] bg-white px-4 py-4">
-                  <p className="text-sm text-[var(--muted)]">Email</p>
-                  <p className="mt-1 font-semibold text-[var(--foreground)]">{member.email || "Not added yet"}</p>
+                <div className="rounded-[24px] border border-[var(--border)] bg-white px-4 py-4 md:px-5">
+                  <p className="text-xs font-medium uppercase tracking-[0.18em] text-[var(--muted)]">Email</p>
+                  <p className="mt-2 text-base font-semibold text-[var(--foreground)] md:text-lg">{member.email || "Not added yet"}</p>
                 </div>
-                <div className="rounded-[22px] border border-[var(--border)] bg-white px-4 py-4">
-                  <p className="text-sm text-[var(--muted)]">Address</p>
-                  <p className="mt-1 text-sm leading-6 text-[var(--foreground)]">{member.address1 || "Not added"}</p>
+                <div className="rounded-[24px] border border-[var(--border)] bg-white px-4 py-4 md:px-5">
+                  <p className="text-xs font-medium uppercase tracking-[0.18em] text-[var(--muted)]">Address</p>
+                  <p className="mt-2 text-sm leading-7 text-[var(--foreground)]">{member.address1 || "Not added"}</p>
+                  {member.address2 ? <p className="text-sm leading-7 text-[var(--foreground)]">{member.address2}</p> : null}
+                  {member.address3 ? <p className="text-sm leading-7 text-[var(--foreground)]">{member.address3}</p> : null}
                 </div>
-                <div className="rounded-[22px] border border-[var(--border)] bg-white px-4 py-4">
-                  <p className="text-sm text-[var(--muted)]">City / Pincode</p>
-                  <p className="mt-1 font-semibold text-[var(--foreground)]">{member.city || "-"} {member.pincode || ""}</p>
+                <div className="rounded-[24px] border border-[var(--border)] bg-white px-4 py-4 md:px-5">
+                  <p className="text-xs font-medium uppercase tracking-[0.18em] text-[var(--muted)]">City / Pincode</p>
+                  <p className="mt-2 text-base font-semibold text-[var(--foreground)] md:text-lg">{member.city || "-"} {member.pincode || ""}</p>
                 </div>
               </div>
             </div>
