@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { MemberLoginForm } from "@/components/auth/member-login-form";
 
 export default function Home() {
@@ -11,15 +12,80 @@ export default function Home() {
 
           <div className="relative grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-start">
             <div>
-              <p className="font-mono text-xs uppercase tracking-[0.34em] text-[#3c589e]">Welcome to Poona Club</p>
-              <h1 className="mt-4 max-w-4xl text-5xl font-semibold leading-[0.95] tracking-[-0.04em] text-[var(--foreground)] md:text-7xl">
-                POONACLUB
-              </h1>
-              <p className="mt-5 max-w-2xl text-base leading-7 text-[var(--muted)] md:text-lg">
-                A secure member portal for profile completion, mobile number verification, and a cleaner family account structure across the club.
-              </p>
-              <div className="mt-7">
-                <p className="text-sm text-[var(--muted)]">Quick, secure WhatsApp OTP access for every member.</p>
+              <div className="flex flex-col gap-6">
+                <div className="flex items-center gap-4">
+                  <div className="rounded-[26px] border border-white/80 bg-white/88 p-3 shadow-sm">
+                    <Image
+                      src="/poona-club-logo.png"
+                      alt="The Poona Club Ltd. logo"
+                      width={110}
+                      height={110}
+                      className="h-[82px] w-auto md:h-[94px]"
+                      priority
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <p className="font-mono text-xs uppercase tracking-[0.34em] text-[#3c589e]">
+                    Primary Member Record Verification
+                  </p>
+                  <h1 className="mt-3 max-w-4xl text-3xl font-semibold leading-[1.02] tracking-[-0.04em] text-[var(--foreground)] md:text-5xl xl:text-6xl">
+                    Welcome To The Poona Club Ltd. Member Profile Updation Portal
+                  </h1>
+                </div>
+
+                <div className="max-w-3xl space-y-4 text-sm leading-7 text-[var(--muted)] md:text-base">
+                  <p>
+                    This secure member portal has been created for the updation and verification of
+                    Primary Member records for voting purposes only.
+                  </p>
+                  <p>
+                    Primary Members are requested to review and update their personal details,
+                    including:
+                  </p>
+                </div>
+
+                <div className="soft-card max-w-3xl rounded-[28px] border-white/70 bg-white/88 p-5 md:p-6">
+                  <ul className="grid gap-3 text-sm leading-6 text-[var(--foreground)] md:text-base">
+                    <li className="flex items-start gap-3">
+                      <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-[#3c589e]" />
+                      <span>Mobile Number</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-[#3c589e]" />
+                      <span>Email Address</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-[#3c589e]" />
+                      <span>Latest Photograph</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-[#3c589e]" />
+                      <span>Identity Document Details / eKYC Verification wherever applicable</span>
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="max-w-3xl space-y-4 text-sm leading-7 text-[var(--muted)] md:text-base">
+                  <p>
+                    Accurate and updated records will help ensure a smooth, secure, transparent, and
+                    efficient voting process.
+                  </p>
+                </div>
+
+                <div className="max-w-3xl rounded-[24px] border border-[#c8d3ea] bg-[#eef2fb] px-5 py-4 text-sm font-semibold leading-6 text-[#24345f] md:text-base">
+                  Please complete the profile updation and verification process on or before 1st July
+                  2026.
+                </div>
+
+                <div className="max-w-3xl space-y-4 text-sm leading-7 text-[var(--muted)] md:text-base">
+                  <p>
+                    We thank you for your cooperation and support in helping us maintain an accurate
+                    and updated member database.
+                  </p>
+                  <p className="font-semibold text-[var(--foreground)]">The Poona Club Ltd.</p>
+                </div>
               </div>
             </div>
 
