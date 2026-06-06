@@ -30,31 +30,13 @@ interface DocumentRow {
   id: string;
   profile_id: string;
   document_type: "selfie" | "document";
+  document_group: "selfie" | "aadhar" | "passport" | "legacy" | null;
+  document_part: "selfie" | "front" | "back" | "first_page" | "last_page" | "legacy" | null;
+  document_number: string | null;
   file_path: string;
   file_name: string;
   mime_type: string | null;
   uploaded_at: string;
-}
-
-function deriveDocumentMeta(documentType: "selfie" | "document", filePath: string) {
-  if (documentType === "selfie") {
-    return { documentGroup: "selfie", documentPart: "selfie" } as const;
-  }
-
-  if (filePath.includes("/aadhar/front/")) {
-    return { documentGroup: "aadhar", documentPart: "front" } as const;
-  }
-  if (filePath.includes("/aadhar/back/")) {
-    return { documentGroup: "aadhar", documentPart: "back" } as const;
-  }
-  if (filePath.includes("/passport/first_page/")) {
-    return { documentGroup: "passport", documentPart: "first_page" } as const;
-  }
-  if (filePath.includes("/passport/last_page/")) {
-    return { documentGroup: "passport", documentPart: "last_page" } as const;
-  }
-
-  return { documentGroup: "legacy", documentPart: "legacy" } as const;
 }
 
 interface OtpRequestRow {
@@ -124,17 +106,17 @@ function mapProfile(row: ProfileRow): MemberProfile {
 }
 
 function mapDocument(row: DocumentRow): MemberDocument {
-  const meta = deriveDocumentMeta(row.document_type, row.file_path);
   return {
     id: row.id,
     profileId: row.profile_id,
     documentType: row.document_type,
-    documentGroup: meta.documentGroup,
-    documentPart: meta.documentPart,
+    documentGroup: (row.document_group ?? "legacy") as MemberDocument["documentGroup"],
+    documentPart: (row.document_part ?? "legacy") as MemberDocument["documentPart"],
     fileName: row.file_name,
     filePath: row.file_path,
     mimeType: row.mime_type ?? "application/octet-stream",
     uploadedAt: row.uploaded_at,
+    documentNumber: row.document_number ?? null,
   };
 }
 
@@ -502,6 +484,9 @@ export async function uploadMemberDocument(
     .insert({
       profile_id: profileId,
       document_type: documentType,
+      document_group: documentGroup ?? (documentType === "selfie" ? "selfie" : "legacy"),
+      document_part: documentPart ?? (documentType === "selfie" ? "selfie" : "legacy"),
+      document_number: null,
       file_name: fileName,
       file_path: filePath,
       mime_type: mimeType,
@@ -544,6 +529,9 @@ export async function getMemberProfilePhotoUrl(profileId: string, photoUrl?: str
       id: document.id,
       profile_id: document.profileId,
       document_type: document.documentType,
+      document_group: document.documentGroup,
+      document_part: document.documentPart,
+      document_number: document.documentNumber ?? null,
       file_path: document.filePath,
       file_name: document.fileName,
       mime_type: document.mimeType,
