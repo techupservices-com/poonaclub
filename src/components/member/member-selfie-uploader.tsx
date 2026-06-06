@@ -1,0 +1,133 @@
+"use client";
+
+import { Camera } from "lucide-react";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { useRef, useState } from "react";
+
+const MAX_IMAGE_DIMENSION = 1600;
+const JPEG_QUALITY = 0.82;
+
+export function MemberSelfieUploader({ photoUrl, hasSelfie }: { photoUrl: string | null; hasSelfie: boolean }) {
+  const router = useRouter();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isRemoving, setIsRemoving] = useState(false);
+
+  async function compressImage(file: File) {
+    const imageUrl = URL.createObjectURL(file);
+    try {
+      const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const img = new window.Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error("Unable to process the selected image."));
+        img.src = imageUrl;
+      });
+      const scale = Math.min(1, MAX_IMAGE_DIMENSION / Math.max(image.width, image.height));
+      const width = Math.max(1, Math.round(image.width * scale));
+      const height = Math.max(1, Math.round(image.height * scale));
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const context = canvas.getContext("2d");
+      if (!context) throw new Error("Unable to prepare image upload.");
+      context.drawImage(image, 0, 0, width, height);
+      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", JPEG_QUALITY));
+      if (!blob) throw new Error("Unable to compress the selected image.");
+      return new File([blob], file.name.replace(/\.[^.]+$/, ".jpg"), { type: "image/jpeg", lastModified: Date.now() });
+    } finally {
+      URL.revokeObjectURL(imageUrl);
+    }
+  }
+
+  async function uploadSelfie(file: File) {
+    setIsUploading(true);
+    try {
+      const prepared = await compressImage(file);
+      const formData = new FormData();
+      formData.append("selfie", prepared);
+      const response = await fetch("/api/member/uploads", { method: "POST", body: formData });
+      if (response.ok) router.refresh();
+    } finally {
+      setIsUploading(false);
+      if (inputRef.current) inputRef.current.value = "";
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(null);
+    }
+  }
+
+  async function removeSelfie() {
+    setIsRemoving(true);
+    try {
+      const response = await fetch("/api/member/uploads/selfie", { method: "DELETE" });
+      if (response.ok) router.refresh();
+    } finally {
+      setIsRemoving(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => inputRef.current?.click()}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            inputRef.current?.click();
+          }
+        }}
+        className="group relative flex aspect-square w-full items-center justify-center overflow-hidden rounded-[28px] border border-[var(--border)] bg-[#eef2fb] shadow-sm sm:aspect-[4/5] lg:max-h-[236px]"
+      >
+        {previewUrl || photoUrl ? (
+          <Image src={previewUrl || photoUrl!} alt="Member selfie" fill unoptimized className="object-cover" />
+        ) : (
+          <div className="flex h-full w-full flex-col items-center justify-center gap-3 px-4 text-center text-[#3c589e]">
+            <span className="flex h-14 w-14 items-center justify-center rounded-full bg-white shadow-sm sm:h-16 sm:w-16">
+              <Camera className="h-8 w-8" />
+            </span>
+            <span className="text-sm font-semibold tracking-[0.01em]">Set profile photo</span>
+          </div>
+        )}
+        <span className="absolute inset-x-2 bottom-2 rounded-full bg-white/92 px-3 py-2 text-center text-[11px] font-semibold text-[#24345f] shadow-sm transition group-hover:bg-white sm:inset-x-3 sm:bottom-3 sm:text-xs">
+          {hasSelfie || photoUrl ? "Replace photo" : "Upload selfie"}
+        </span>
+      </div>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          if (!file) return;
+          if (previewUrl) URL.revokeObjectURL(previewUrl);
+          setPreviewUrl(URL.createObjectURL(file));
+          void uploadSelfie(file);
+        }}
+      />
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          disabled={isUploading}
+          className="rounded-2xl bg-[#3c589e] px-4 py-3 text-sm font-semibold text-white hover:bg-[#2f467e] disabled:opacity-60"
+        >
+          {isUploading ? "Uploading..." : hasSelfie || photoUrl ? "Replace" : "Upload selfie"}
+        </button>
+        {hasSelfie || photoUrl ? (
+          <button
+            type="button"
+            onClick={() => void removeSelfie()}
+            disabled={isRemoving}
+            className="rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm font-semibold text-[var(--foreground)] hover:border-[#6f84ba] hover:bg-[#eef2fb] disabled:opacity-60"
+          >
+            {isRemoving ? "Removing..." : "Remove"}
+          </button>
+        ) : null}
+      </div>
+    </div>
+  );
+}

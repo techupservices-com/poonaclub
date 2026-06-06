@@ -13,9 +13,25 @@ export default async function AdminMemberDetailPage({ params }: { params: Promis
   const mobileOwner = await isMobileLoginOwner(member.id, member.currentMobile);
 
   const documents = (await listDocuments(id)).sort((left, right) => {
-    if (left.documentType === right.documentType) return 0;
-    return left.documentType === "selfie" ? -1 : 1;
+    const order = [
+      "selfie:selfie",
+      "aadhar:front",
+      "aadhar:back",
+      "passport:first_page",
+      "passport:last_page",
+      "legacy:legacy",
+    ];
+    return order.indexOf(`${left.documentGroup}:${left.documentPart}`) - order.indexOf(`${right.documentGroup}:${right.documentPart}`);
   });
+
+  const getDocumentLabel = (document: (typeof documents)[number]) => {
+    if (document.documentGroup === "selfie") return "Selfie";
+    if (document.documentGroup === "aadhar" && document.documentPart === "front") return "Aadhar Front";
+    if (document.documentGroup === "aadhar" && document.documentPart === "back") return "Aadhar Back";
+    if (document.documentGroup === "passport" && document.documentPart === "first_page") return "Passport First Page";
+    if (document.documentGroup === "passport" && document.documentPart === "last_page") return "Passport Last Page";
+    return "Legacy document";
+  };
 
   return (
     <section className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
@@ -71,7 +87,7 @@ export default async function AdminMemberDetailPage({ params }: { params: Promis
         <div className="mt-6 space-y-3">
           {documents.map((document) => (
             <div key={document.id} className="rounded-[22px] border border-[var(--border)] bg-white px-4 py-4">
-              <p className="font-medium capitalize">{document.documentType}</p>
+              <p className="font-medium">{getDocumentLabel(document)}</p>
               <p className="text-sm text-[var(--muted)]">{document.fileName}</p>
             </div>
           ))}

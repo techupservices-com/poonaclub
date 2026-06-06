@@ -18,14 +18,23 @@ export default async function UploadsPage() {
     ? await getMemberProfilePhotoUrl(member.id, member.photoUrl)
     : null;
   const sortedDocuments = [...documents].sort((left, right) => {
-    if (left.documentType === right.documentType) return 0;
-    return left.documentType === "selfie" ? -1 : 1;
+    const order = [
+      "selfie:selfie",
+      "aadhar:front",
+      "aadhar:back",
+      "passport:first_page",
+      "passport:last_page",
+      "legacy:legacy",
+    ];
+    return order.indexOf(`${left.documentGroup}:${left.documentPart}`) - order.indexOf(`${right.documentGroup}:${right.documentPart}`);
   });
 
   const documentItems = await Promise.all(
     sortedDocuments.map(async (document) => ({
       id: document.id,
       documentType: document.documentType,
+      documentGroup: document.documentGroup,
+      documentPart: document.documentPart,
       fileName: document.fileName,
       uploadedAt: formatDate(document.uploadedAt),
       previewUrl:

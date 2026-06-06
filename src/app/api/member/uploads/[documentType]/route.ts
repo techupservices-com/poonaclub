@@ -1,8 +1,8 @@
-import { addAuditLog, removeMemberDocument } from "@/lib/data";
+import { addAuditLog, removeMemberDocument, removeMemberDocumentById } from "@/lib/data";
 import { getMemberSession } from "@/lib/auth";
 
 export async function DELETE(
-  _request: Request,
+  request: Request,
   context: RouteContext<"/api/member/uploads/[documentType]">,
 ) {
   const session = await getMemberSession();
@@ -13,7 +13,14 @@ export async function DELETE(
     return Response.json({ error: "Invalid document type." }, { status: 400 });
   }
 
-  await removeMemberDocument(session.subject, documentType);
+  const url = new URL(request.url);
+  const documentId = url.searchParams.get("documentId");
+
+  if (documentId) {
+    await removeMemberDocumentById(session.subject, documentId);
+  } else {
+    await removeMemberDocument(session.subject, documentType);
+  }
   await addAuditLog({
     actorType: "member",
     actorId: session.subject,

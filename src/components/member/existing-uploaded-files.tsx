@@ -9,6 +9,8 @@ const UPLOAD_SCROLL_FLAG = "pc-scroll-existing-uploads";
 interface UploadedFileItem {
   id: string;
   documentType: "selfie" | "document";
+  documentGroup: string;
+  documentPart: string;
   fileName: string;
   uploadedAt: string;
   previewUrl: string | null;
@@ -30,15 +32,36 @@ export function ExistingUploadedFiles({ items }: { items: UploadedFileItem[] }) 
     });
   }, []);
 
-  async function removeFile(documentType: "selfie" | "document") {
-    setBusyType(documentType);
-    const response = await fetch(`/api/member/uploads/${documentType}`, { method: "DELETE" });
+  async function removeFile(item: UploadedFileItem) {
+    setBusyType(item.documentType);
+    const response = await fetch(`/api/member/uploads/${item.documentType}?documentId=${item.id}`, { method: "DELETE" });
     setBusyType(null);
     if (response.ok) router.refresh();
   }
 
-  function replaceFile(documentType: "selfie" | "document") {
-    document.getElementById(documentType)?.click();
+  function replaceFile(item: UploadedFileItem) {
+    const key =
+      item.documentGroup === "selfie"
+        ? "selfie"
+        : item.documentGroup === "aadhar"
+          ? item.documentPart === "front"
+            ? "aadharFront"
+            : "aadharBack"
+          : item.documentGroup === "passport"
+            ? item.documentPart === "first_page"
+              ? "passportFirstPage"
+              : "passportLastPage"
+            : "document";
+    document.getElementById(key)?.click();
+  }
+
+  function getLabel(item: UploadedFileItem) {
+    if (item.documentGroup === "selfie") return "Selfie";
+    if (item.documentGroup === "aadhar" && item.documentPart === "front") return "Aadhar Front";
+    if (item.documentGroup === "aadhar" && item.documentPart === "back") return "Aadhar Back";
+    if (item.documentGroup === "passport" && item.documentPart === "first_page") return "Passport First Page";
+    if (item.documentGroup === "passport" && item.documentPart === "last_page") return "Passport Last Page";
+    return "Legacy document";
   }
 
   return (
@@ -68,14 +91,17 @@ export function ExistingUploadedFiles({ items }: { items: UploadedFileItem[] }) 
             </div>
           )}
           <div className="flex items-center justify-between gap-3">
-            <p className="font-semibold capitalize">{item.documentType}</p>
+            <p className="font-semibold">{getLabel(item)}</p>
           </div>
           <p className="mt-2 text-sm text-[var(--foreground)]">{item.fileName}</p>
           <p className="mt-1 text-xs text-[var(--muted)]">Uploaded {item.uploadedAt}</p>
+          {item.documentGroup === "legacy" ? (
+            <p className="mt-2 text-xs font-semibold text-red-600">Legacy upload on record. Please upload the document again in the new Aadhar or Passport format.</p>
+          ) : null}
           <div className="mt-3 flex flex-wrap gap-2">
             <button
               type="button"
-              onClick={() => replaceFile(item.documentType)}
+              onClick={() => replaceFile(item)}
               className="inline-flex rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm font-semibold text-[var(--foreground)] hover:border-[#6f84ba] hover:bg-[#eef2fb]"
             >
               Replace file
@@ -83,7 +109,7 @@ export function ExistingUploadedFiles({ items }: { items: UploadedFileItem[] }) 
             <button
               type="button"
               disabled={busyType === item.documentType}
-              onClick={() => removeFile(item.documentType)}
+              onClick={() => removeFile(item)}
               className="inline-flex rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm font-semibold text-[var(--foreground)] hover:border-[#6f84ba] hover:bg-[#eef2fb] disabled:opacity-60"
             >
               {busyType === item.documentType ? "Removing..." : "Remove file"}

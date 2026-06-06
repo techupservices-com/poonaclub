@@ -36,6 +36,27 @@ interface DocumentRow {
   uploaded_at: string;
 }
 
+function deriveDocumentMeta(documentType: "selfie" | "document", filePath: string) {
+  if (documentType === "selfie") {
+    return { documentGroup: "selfie", documentPart: "selfie" } as const;
+  }
+
+  if (filePath.includes("/aadhar/front/")) {
+    return { documentGroup: "aadhar", documentPart: "front" } as const;
+  }
+  if (filePath.includes("/aadhar/back/")) {
+    return { documentGroup: "aadhar", documentPart: "back" } as const;
+  }
+  if (filePath.includes("/passport/first_page/")) {
+    return { documentGroup: "passport", documentPart: "first_page" } as const;
+  }
+  if (filePath.includes("/passport/last_page/")) {
+    return { documentGroup: "passport", documentPart: "last_page" } as const;
+  }
+
+  return { documentGroup: "legacy", documentPart: "legacy" } as const;
+}
+
 interface OtpRequestRow {
   target_profile_id: string;
   action: string;
@@ -103,10 +124,13 @@ function mapProfile(row: ProfileRow): MemberProfile {
 }
 
 function mapDocument(row: DocumentRow): MemberDocument {
+  const meta = deriveDocumentMeta(row.document_type, row.file_path);
   return {
     id: row.id,
     profileId: row.profile_id,
     documentType: row.document_type,
+    documentGroup: meta.documentGroup,
+    documentPart: meta.documentPart,
     fileName: row.file_name,
     filePath: row.file_path,
     mimeType: row.mime_type ?? "application/octet-stream",
@@ -442,11 +466,15 @@ export async function uploadMemberDocument(
   fileName: string,
   mimeType: string,
   bytes: ArrayBuffer,
+  documentGroup?: "selfie" | "aadhar" | "passport" | "legacy",
+  documentPart?: "selfie" | "front" | "back" | "first_page" | "last_page" | "legacy",
 ) {
   const client = getRequiredSupabaseClient();
 
   const bucket = documentType === "selfie" ? SELFIE_BUCKET : DOCUMENT_BUCKET;
-  const filePath = `${profileId}/${documentType}/${generateId("upload")}-${fileName.replace(/\s+/g, "-")}`;
+  const pathGroup = documentGroup ?? (documentType === "selfie" ? "selfie" : "legacy");
+  const pathPart = documentPart ?? (documentType === "selfie" ? "selfie" : "legacy");
+  const filePath = `${profileId}/${pathGroup}/${pathPart}/${generateId("upload")}-${fileName.replace(/\s+/g, "-")}`;
 
   const { error: uploadError } = await client.storage
     .from(bucket)
@@ -457,7 +485,18 @@ export async function uploadMemberDocument(
 
   if (uploadError) throw uploadError;
 
-  await client.from("member_documents").delete().eq("profile_id", profileId).eq("document_type", documentType);
+  if (documentType === "selfie") {
+    await client.from("member_documents").delete().eq("profile_id", profileId).eq("document_type", documentType);
+  } else if (documentGroup && documentPart) {
+    const existingDocs = await listDocuments(profileId);
+    const existing = existingDocs.find(
+      (document) => document.documentGroup === documentGroup && document.documentPart === documentPart,
+    );
+    if (existing) {
+      await client.from("member_documents").delete().eq("id", existing.id);
+      await client.storage.from(bucket).remove([existing.filePath]);
+    }
+  }
   const { data, error } = await client
     .from("member_documents")
     .insert({
@@ -544,6 +583,38 @@ export async function removeMemberDocument(profileId: string, documentType: "sel
   if (deleteError) throw deleteError;
 
   if (documentType === "selfie") {
+    const { error: profileError } = await client
+      .from("profiles")
+      .update({ photo_url: null, updated_at: new Date().toISOString() })
+      .eq("id", profileId);
+    if (profileError) throw profileError;
+  }
+
+  return true;
+}
+
+export async function removeMemberDocumentById(profileId: string, documentId: string) {
+  const client = getRequiredSupabaseClient();
+  const { data, error } = await client
+    .from("member_documents")
+    .select("id,file_path,document_type")
+    .eq("profile_id", profileId)
+    .eq("id", documentId)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) return null;
+
+  const bucket = data.document_type === "selfie" ? SELFIE_BUCKET : DOCUMENT_BUCKET;
+  const [{ error: storageError }, { error: deleteError }] = await Promise.all([
+    client.storage.from(bucket).remove([data.file_path]),
+    client.from("member_documents").delete().eq("id", data.id),
+  ]);
+
+  if (storageError) throw storageError;
+  if (deleteError) throw deleteError;
+
+  if (data.document_type === "selfie") {
     const { error: profileError } = await client
       .from("profiles")
       .update({ photo_url: null, updated_at: new Date().toISOString() })

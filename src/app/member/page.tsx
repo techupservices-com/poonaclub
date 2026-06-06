@@ -1,8 +1,7 @@
-import { Camera } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 import { getMemberSession } from "@/lib/auth";
 import { getLinkedMembers, getMemberById, getMemberProfilePhotoUrl, isMobileLoginOwner, listDocuments } from "@/lib/data";
+import { MemberSelfieUploader } from "@/components/member/member-selfie-uploader";
 import { formatMobile } from "@/lib/utils";
 import { StatusChip } from "@/components/shared/status-chip";
 
@@ -15,13 +14,29 @@ export default async function MemberDashboardPage() {
   const linkedMembers = await getLinkedMembers(member.id);
   const documents = await listDocuments(member.id);
   const orderedDocuments = [...documents].sort((left, right) => {
-    if (left.documentType === right.documentType) return 0;
-    return left.documentType === "selfie" ? -1 : 1;
+    const order = [
+      "selfie:selfie",
+      "aadhar:front",
+      "aadhar:back",
+      "passport:first_page",
+      "passport:last_page",
+      "legacy:legacy",
+    ];
+    return order.indexOf(`${left.documentGroup}:${left.documentPart}`) - order.indexOf(`${right.documentGroup}:${right.documentPart}`);
   });
   const profilePhotoUrl = await getMemberProfilePhotoUrl(member.id, member.photoUrl);
   const requiresLinkedMemberCleanup =
     linkedMembers.length > 1 && linkedMembers.some((entry) => !entry.mobileVerified);
   const mobileOwner = await isMobileLoginOwner(member.id, member.currentMobile);
+
+  function getDocumentLabel(document: (typeof orderedDocuments)[number]) {
+    if (document.documentGroup === "selfie") return "Selfie";
+    if (document.documentGroup === "aadhar" && document.documentPart === "front") return "Aadhar Front";
+    if (document.documentGroup === "aadhar" && document.documentPart === "back") return "Aadhar Back";
+    if (document.documentGroup === "passport" && document.documentPart === "first_page") return "Passport First Page";
+    if (document.documentGroup === "passport" && document.documentPart === "last_page") return "Passport Last Page";
+    return "Legacy document";
+  }
 
   const steps = [
     {
@@ -81,30 +96,10 @@ export default async function MemberDashboardPage() {
             </div>
 
             <div className="grid gap-4 sm:grid-cols-[128px_1fr] sm:items-start lg:grid-cols-[170px_1fr]">
-              <Link
-                href="/member/uploads"
-                className="group relative flex aspect-square w-full items-center justify-center overflow-hidden rounded-[28px] border border-[var(--border)] bg-[#eef2fb] shadow-sm sm:aspect-[4/5] lg:max-h-[236px]"
-              >
-                {profilePhotoUrl ? (
-                  <Image
-                    src={profilePhotoUrl}
-                    alt={`${member.fullName} profile`}
-                    fill
-                    unoptimized
-                    className="object-cover"
-                  />
-                ) : (
-                  <div className="flex h-full w-full flex-col items-center justify-center gap-3 px-4 text-center text-[#3c589e]">
-                    <span className="flex h-14 w-14 items-center justify-center rounded-full bg-white shadow-sm sm:h-16 sm:w-16">
-                      <Camera className="h-8 w-8" />
-                    </span>
-                    <span className="text-sm font-semibold tracking-[0.01em]">Set profile photo</span>
-                  </div>
-                )}
-                <span className="absolute inset-x-2 bottom-2 rounded-full bg-white/92 px-3 py-2 text-center text-[11px] font-semibold text-[#24345f] shadow-sm transition group-hover:bg-white sm:inset-x-3 sm:bottom-3 sm:text-xs">
-                  {profilePhotoUrl ? "Change photo" : "Upload selfie"}
-                </span>
-              </Link>
+              <MemberSelfieUploader
+                photoUrl={profilePhotoUrl}
+                hasSelfie={documents.some((document) => document.documentGroup === "selfie")}
+              />
 
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="rounded-[24px] border border-[var(--border)] bg-white px-4 py-4 md:px-5">
@@ -193,7 +188,7 @@ export default async function MemberDashboardPage() {
             <div className="mt-4 grid gap-3">
               {orderedDocuments.map((document) => (
                 <div key={document.id} className="rounded-[22px] border border-[var(--border)] bg-white px-4 py-4">
-                  <p className="font-medium capitalize">{document.documentType}</p>
+                  <p className="font-medium">{getDocumentLabel(document)}</p>
                   <p className="text-sm text-[var(--muted)]">{document.fileName}</p>
                 </div>
               ))}

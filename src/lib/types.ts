@@ -37,6 +37,8 @@ export interface MemberDocument {
   id: string;
   profileId: string;
   documentType: "selfie" | "document";
+  documentGroup: "selfie" | "aadhar" | "passport" | "legacy";
+  documentPart: "selfie" | "front" | "back" | "first_page" | "last_page" | "legacy";
   fileName: string;
   filePath: string;
   mimeType: string;
