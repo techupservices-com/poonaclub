@@ -16,8 +16,6 @@ function mapOtpRecord(record: {
   profile_id: string;
   mobile: string;
   purpose: VerificationPurpose;
-  identifier_type: IdentifierType | null;
-  delivery_channel: OtpDeliveryChannel | null;
   otp_hash: string;
   expires_at: string;
   created_at: string;
@@ -31,8 +29,6 @@ function mapOtpRecord(record: {
     profileId: record.profile_id,
     mobile: record.mobile,
     purpose: record.purpose,
-    identifierType: record.identifier_type ?? undefined,
-    deliveryChannel: record.delivery_channel ?? undefined,
     otpHash: record.otp_hash,
     expiresAt: record.expires_at,
     createdAt: record.created_at,
@@ -60,18 +56,15 @@ export async function createOtp(
 
   await client
     .from("otp_requests")
-      .update({ verify_status: "expired" })
-      .eq("profile_id", profileId)
-      .eq("purpose", purpose)
-      .eq("delivery_channel", deliveryChannel)
-      .eq("verify_status", "pending");
+    .update({ verify_status: "expired" })
+    .eq("profile_id", profileId)
+    .eq("purpose", purpose)
+    .eq("verify_status", "pending");
 
   const payload = {
     profile_id: profileId,
     mobile: destination,
     purpose,
-    identifier_type: identifierType,
-    delivery_channel: deliveryChannel,
     otp_hash: hashValue(code),
     expires_at: expiresAt.toISOString(),
     attempt_count: 0,

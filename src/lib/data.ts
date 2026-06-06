@@ -37,10 +37,8 @@ interface DocumentRow {
 }
 
 interface OtpRequestRow {
-  profile_id: string;
-  purpose: string;
-  identifier_type: string | null;
-  verify_status: string;
+  target_profile_id: string;
+  action: string;
 }
 
 interface MobileChangeRow {
@@ -175,7 +173,7 @@ async function getProfilesAndDocuments() {
   ] = await Promise.all([
     client.from("profiles").select("*").order("full_name"),
     client.from("member_documents").select("*"),
-    client.from("otp_requests").select("profile_id,purpose,identifier_type,verify_status"),
+    client.from("audit_logs").select("target_profile_id,action"),
   ]);
 
   if (profilesError) {
@@ -207,10 +205,8 @@ async function buildMembersWithVerification(
   return Promise.all(profiles.map(async (row) => {
     const emailVerified = otpRequests.some(
       (entry) =>
-        entry.profile_id === row.id &&
-        entry.verify_status === "verified" &&
-        entry.identifier_type === "email" &&
-        (entry.purpose === "login" || entry.purpose === "email_verify"),
+        entry.target_profile_id === row.id &&
+        (entry.action === "Verified email via OTP" || entry.action.includes("Verified login email via email OTP")),
     );
     const profile = { ...mapProfile(row), emailVerified };
     const memberDocuments = documents.filter((document) => document.profile_id === row.id).map(mapDocument);
