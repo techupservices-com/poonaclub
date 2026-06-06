@@ -14,10 +14,7 @@ export function computeVerification(
     profile.membershipId &&
       profile.fullName &&
       profile.email &&
-      profile.currentMobile &&
-      profile.address1 &&
-      profile.city &&
-      profile.pincode,
+      profile.currentMobile,
   );
   const completed =
     profileConfirmed && profile.mobileVerified && profile.emailVerified && selfieUploaded && documentUploaded;
