@@ -14,13 +14,14 @@ export default function Home() {
             <div>
               <div className="flex flex-col gap-6">
                 <div className="flex items-center gap-4">
-                  <div className="rounded-[26px] border border-white/80 bg-white/88 p-3 shadow-sm">
+                  <div>
                     <Image
                       src="/poona-club-logo.png"
                       alt="The Poona Club Ltd. logo"
-                      width={110}
-                      height={110}
-                      className="h-[82px] w-auto md:h-[94px]"
+                      width={220}
+                      height={220}
+                      unoptimized
+                      className="h-[96px] w-auto object-contain md:h-[112px]"
                       priority
                     />
                   </div>
@@ -42,7 +43,7 @@ export default function Home() {
                   </p>
                   <p>
                     Primary Members are requested to review and update their personal details,
-                    including:
+                    including :
                   </p>
                 </div>
 
@@ -62,7 +63,7 @@ export default function Home() {
                     </li>
                     <li className="flex items-start gap-3">
                       <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-[#3c589e]" />
-                      <span>Identity Document Details / eKYC Verification wherever applicable</span>
+                      <span>Identity Document Details / eKYC Verification</span>
                     </li>
                   </ul>
                 </div>
