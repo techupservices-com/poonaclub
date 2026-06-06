@@ -177,7 +177,12 @@ export function UploadForm({ items }: { items: ExistingUploadItem[] }) {
       <div className="flex flex-col gap-3 text-sm text-[var(--muted)]">
         <span>{getLabel(key)}</span>
         {preview ? (
-          <label htmlFor={key} className={`relative flex max-w-[260px] ${getAspectClass(key)} ${isUploading ? "pointer-events-none" : "cursor-pointer"} items-center justify-center overflow-hidden rounded-[22px] border border-[var(--border)] bg-[#eef2fb]`}>
+          <button
+            type="button"
+            onClick={() => refs[key].current?.click()}
+            disabled={isUploading}
+            className={`relative flex max-w-[260px] ${getAspectClass(key)} items-center justify-center overflow-hidden rounded-[22px] border border-[var(--border)] bg-[#eef2fb] text-left ${isUploading ? "pointer-events-none" : "cursor-pointer"}`}
+          >
             <Image
               src={preview}
               alt={`${key} preview`}
@@ -186,7 +191,7 @@ export function UploadForm({ items }: { items: ExistingUploadItem[] }) {
               unoptimized
               className="h-auto max-h-full w-full rounded-[22px] object-cover"
             />
-          </label>
+          </button>
         ) : null}
         <input type="text" value={getFileName(key)} readOnly className="rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-[var(--foreground)]" />
         <input
@@ -208,20 +213,14 @@ export function UploadForm({ items }: { items: ExistingUploadItem[] }) {
             await uploadSlot(key, file);
           }}
         />
-        {key === "selfie" ? (
-          <label htmlFor={key} className={`${triggerClassName} ${isUploading ? "pointer-events-none" : "cursor-pointer"}`}>
-            {isUploading ? "Uploading..." : hasExisting ? "Replace file" : "Upload selfie"}
-          </label>
-        ) : (
-          <button
-            type="button"
-            onClick={() => refs[key].current?.click()}
-            disabled={isUploading}
-            className={triggerClassName}
-          >
-            {isUploading ? "Uploading..." : hasExisting ? "Replace file" : "Choose file"}
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={() => refs[key].current?.click()}
+          disabled={isUploading}
+          className={triggerClassName}
+        >
+          {isUploading ? "Uploading..." : hasExisting ? "Replace file" : key === "selfie" ? "Upload selfie" : "Choose file"}
+        </button>
       </div>
     );
   }
