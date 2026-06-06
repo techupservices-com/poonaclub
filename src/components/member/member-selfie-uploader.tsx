@@ -97,16 +97,7 @@ export function MemberSelfieUploader({ photoUrl, hasSelfie }: { photoUrl: string
           void uploadSelfie(file);
         }}
       />
-      <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={() => inputRef.current?.click()}
-          disabled={isUploading}
-          className="rounded-2xl bg-[#3c589e] px-4 py-3 text-sm font-semibold text-white hover:bg-[#2f467e] disabled:opacity-60"
-        >
-          {isUploading ? "Uploading..." : hasSelfie || photoUrl ? "Replace" : "Upload selfie"}
-        </button>
-      </div>
+      {isUploading ? <p className="text-sm font-semibold text-[var(--muted)]">Uploading...</p> : null}
     </div>
   );
 }
