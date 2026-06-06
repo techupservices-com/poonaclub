@@ -90,6 +90,11 @@ export function LinkedMemberManager({ members }: { members: MemberWithVerificati
 
   return (
     <div className="grid gap-4">
+      {members.length > 1 ? (
+        <div className="rounded-[22px] border border-[#d7e0f4] bg-[#eef2fb]/60 px-4 py-4 text-sm leading-6 text-[var(--muted)]">
+          One member can continue using the shared number as the active login owner. Every other linked family member must be moved to a unique number and verified separately.
+        </div>
+      ) : null}
       {members.map((member) => (
         <div key={member.id} className="soft-card rounded-[24px] p-5">
           <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">

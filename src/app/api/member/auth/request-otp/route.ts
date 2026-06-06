@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { findMemberByEmail, findMemberByMobile } from "@/lib/data";
+import { ensureMobileLoginOwner, findMemberByEmail } from "@/lib/data";
 import { sendEmailOtp } from "@/lib/email";
 import { createOtp } from "@/lib/otp-store";
 import { sendSmsOtp } from "@/lib/sms";
@@ -24,7 +24,7 @@ export async function POST(request: Request) {
   const member =
     body.identifierType === "email"
       ? await findMemberByEmail(body.identifier)
-      : await findMemberByMobile(body.identifier);
+      : await ensureMobileLoginOwner(body.identifier);
 
   if (!member) {
     return Response.json({ error: "No member found with that mobile number or email address." }, { status: 404 });

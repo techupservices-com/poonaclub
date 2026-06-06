@@ -62,12 +62,30 @@ interface AuditRow {
   created_at: string;
 }
 
+interface MobileLoginOwnerRow {
+  id: string;
+  mobile: string;
+  profile_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+let mobileOwnerTableAvailable: boolean | null = null;
+
 function getRequiredSupabaseClient() {
   const client = createServerSupabaseClient();
   if (!client) {
     throw new Error("Supabase environment variables are missing.");
   }
   return client;
+}
+
+async function supportsMobileOwnerTable() {
+  if (mobileOwnerTableAvailable !== null) return mobileOwnerTableAvailable;
+  const client = getRequiredSupabaseClient();
+  const { error } = await client.from("mobile_login_owners").select("id").limit(1);
+  mobileOwnerTableAvailable = !error;
+  return mobileOwnerTableAvailable;
 }
 
 function mapProfile(row: ProfileRow): MemberProfile {
@@ -243,6 +261,130 @@ function toProfileUpdates(updates: Partial<MemberProfile>) {
 
 function isUuid(value: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
+function getVerificationScore(member: MemberWithVerification) {
+  let score = 0;
+  if (member.verification.completed) score += 100;
+  if (member.verification.mobileVerified) score += 30;
+  if (member.verification.emailVerified) score += 20;
+  if (member.verification.profileConfirmed) score += 20;
+  if (member.verification.selfieUploaded) score += 15;
+  if (member.verification.documentUploaded) score += 15;
+  return score;
+}
+
+export async function listProfilesByMobile(mobile: string) {
+  const normalized = normalizeMobile(mobile);
+  const members = await listMembersWithVerification();
+  return members.filter((member) => normalizeMobile(member.currentMobile) === normalized);
+}
+
+export function chooseBestMobileOwner(profiles: MemberWithVerification[]) {
+  return [...profiles].sort((left, right) => {
+    const scoreDiff = getVerificationScore(right) - getVerificationScore(left);
+    if (scoreDiff !== 0) return scoreDiff;
+    return left.membershipId.localeCompare(right.membershipId);
+  })[0] ?? null;
+}
+
+async function getMobileLoginOwnerFromAudit(mobile: string) {
+  const client = getRequiredSupabaseClient();
+  const { data, error } = await client
+    .from("audit_logs")
+    .select("target_profile_id,action,metadata,created_at")
+    .eq("action", "Assigned mobile login owner")
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+  const normalized = normalizeMobile(mobile);
+  const match = (data ?? []).find(
+    (entry) => normalizeMobile(String(entry.metadata?.mobile ?? "")) === normalized,
+  );
+
+  return match ? { mobile: normalized, profileId: match.target_profile_id } : null;
+}
+
+export async function getMobileLoginOwner(mobile: string) {
+  const normalized = normalizeMobile(mobile);
+  if (!normalized) return null;
+
+  const client = getRequiredSupabaseClient();
+  if (await supportsMobileOwnerTable()) {
+    const { data, error } = await client
+      .from("mobile_login_owners")
+      .select("*")
+      .eq("mobile", normalized)
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) return null;
+    const row = data as MobileLoginOwnerRow;
+    return { mobile: row.mobile, profileId: row.profile_id };
+  }
+
+  return getMobileLoginOwnerFromAudit(normalized);
+}
+
+export async function setMobileLoginOwner(mobile: string, profileId: string) {
+  const normalized = normalizeMobile(mobile);
+  if (!normalized) return;
+
+  const client = getRequiredSupabaseClient();
+  if (await supportsMobileOwnerTable()) {
+    const { error } = await client.from("mobile_login_owners").upsert(
+      {
+        mobile: normalized,
+        profile_id: profileId,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "mobile" },
+    );
+    if (error) throw error;
+  }
+
+  await addAuditLog({
+    actorType: "member",
+    actorId: profileId,
+    action: "Assigned mobile login owner",
+    targetProfileId: profileId,
+    metadata: { mobile: normalized },
+  });
+}
+
+export async function ensureMobileLoginOwner(mobile: string) {
+  const normalized = normalizeMobile(mobile);
+  if (!normalized) return null;
+
+  const existing = await getMobileLoginOwner(normalized);
+  if (existing?.profileId) {
+    const owner = await getMemberById(existing.profileId);
+    if (owner && normalizeMobile(owner.currentMobile) === normalized) {
+      return owner;
+    }
+  }
+
+  const candidates = await listProfilesByMobile(normalized);
+  if (!candidates.length) return null;
+
+  const owner = chooseBestMobileOwner(candidates);
+  if (!owner) return null;
+  await setMobileLoginOwner(normalized, owner.id);
+  return owner;
+}
+
+export async function reassignMobileLoginOwnerIfNeeded(mobile: string) {
+  const candidates = await listProfilesByMobile(mobile);
+  if (!candidates.length) return null;
+
+  const owner = chooseBestMobileOwner(candidates);
+  if (!owner) return null;
+  await setMobileLoginOwner(mobile, owner.id);
+  return owner;
+}
+
+export async function isMobileLoginOwner(profileId: string, mobile: string) {
+  const owner = await getMobileLoginOwner(mobile);
+  return owner?.profileId === profileId;
 }
 
 export async function listMembersWithVerification() {

@@ -51,6 +51,14 @@ create table if not exists mobile_change_requests (
   verified_at timestamptz
 );
 
+create table if not exists mobile_login_owners (
+  id uuid primary key default gen_random_uuid(),
+  mobile text not null unique,
+  profile_id uuid not null references profiles(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 create table if not exists member_documents (
   id uuid primary key default gen_random_uuid(),
   profile_id uuid not null references profiles(id) on delete cascade,

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { MEMBER_SESSION_COOKIE } from "@/lib/constants";
 import { createSessionToken } from "@/lib/auth";
-import { addAuditLog, updateMember } from "@/lib/data";
+import { addAuditLog, getMemberById, setMobileLoginOwner, updateMember } from "@/lib/data";
 import { verifyOtp } from "@/lib/otp-store";
 
 export async function POST(request: Request) {
@@ -21,6 +21,14 @@ export async function POST(request: Request) {
   await updateMember(body.profileId, {
     ...(body.identifierType === "mobile" ? { mobileVerified: true } : {}),
   });
+
+  if (body.identifierType === "mobile") {
+    const member = await getMemberById(body.profileId);
+    if (member?.currentMobile) {
+      await setMobileLoginOwner(member.currentMobile, member.id);
+    }
+  }
+
   await addAuditLog({
     actorType: "member",
     actorId: body.profileId,

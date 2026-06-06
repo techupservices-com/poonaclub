@@ -2,13 +2,15 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AvatarBadge } from "@/components/shared/avatar-badge";
 import { StatusChip } from "@/components/shared/status-chip";
-import { getMemberById, listDocuments } from "@/lib/data";
+import { getLinkedMembers, getMemberById, isMobileLoginOwner, listDocuments } from "@/lib/data";
 import { formatDate, formatMobile } from "@/lib/utils";
 
 export default async function AdminMemberDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const member = await getMemberById(id);
   if (!member) notFound();
+  const linkedMembers = await getLinkedMembers(id);
+  const mobileOwner = await isMobileLoginOwner(member.id, member.currentMobile);
 
   const documents = (await listDocuments(id)).sort((left, right) => {
     if (left.documentType === right.documentType) return 0;
@@ -38,6 +40,16 @@ export default async function AdminMemberDetailPage({ params }: { params: Promis
         <div className="mt-6 rounded-[22px] border border-[var(--border)] bg-white px-4 py-4">
           <p className="text-sm text-[var(--muted)]">Address</p>
           <p className="mt-1 leading-7">{member.address1}, {member.address2}, {member.address3}, {member.city} {member.pincode}</p>
+        </div>
+        <div className="mt-6 rounded-[22px] border border-[var(--border)] bg-white px-4 py-4">
+          <p className="text-sm text-[var(--muted)]">Shared mobile ownership</p>
+          <p className="mt-1 leading-7">
+            {linkedMembers.length > 1
+              ? mobileOwner
+                ? "This member is currently the active login owner for the shared mobile number."
+                : "This member shares the mobile number with other records and still needs a unique verified number."
+              : "This mobile number is not currently shared with other member records."}
+          </p>
         </div>
         <div className="mt-6 flex flex-wrap gap-3">
           <Link href={`/admin/members/${member.id}/edit`} className="inline-flex rounded-full bg-[var(--foreground)] px-4 py-3 text-sm font-semibold text-white hover:bg-[var(--primary-strong)]">Edit member</Link>

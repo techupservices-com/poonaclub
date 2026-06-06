@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { getMemberSession } from "@/lib/auth";
-import { addAuditLog, completeMobileChangeRequest, getMobileChangeRequest } from "@/lib/data";
+import { addAuditLog, completeMobileChangeRequest, getMobileChangeRequest, reassignMobileLoginOwnerIfNeeded, setMobileLoginOwner } from "@/lib/data";
 import { verifyOtp } from "@/lib/otp-store";
 
 export async function POST(request: Request) {
@@ -31,6 +31,10 @@ export async function POST(request: Request) {
   }
 
   await completeMobileChangeRequest(body.requestId);
+  await setMobileLoginOwner(requestRecord.newMobile, requestRecord.profileId);
+  if (requestRecord.oldMobile) {
+    await reassignMobileLoginOwnerIfNeeded(requestRecord.oldMobile);
+  }
   await addAuditLog({
     actorType: "member",
     actorId: session.subject,

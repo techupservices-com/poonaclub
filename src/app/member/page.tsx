@@ -2,7 +2,7 @@ import { Camera } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { getMemberSession } from "@/lib/auth";
-import { getLinkedMembers, getMemberById, getMemberProfilePhotoUrl, listDocuments } from "@/lib/data";
+import { getLinkedMembers, getMemberById, getMemberProfilePhotoUrl, isMobileLoginOwner, listDocuments } from "@/lib/data";
 import { formatMobile } from "@/lib/utils";
 import { StatusChip } from "@/components/shared/status-chip";
 
@@ -21,6 +21,7 @@ export default async function MemberDashboardPage() {
   const profilePhotoUrl = await getMemberProfilePhotoUrl(member.id, member.photoUrl);
   const requiresLinkedMemberCleanup =
     linkedMembers.length > 1 && linkedMembers.some((entry) => !entry.mobileVerified);
+  const mobileOwner = await isMobileLoginOwner(member.id, member.currentMobile);
 
   const steps = [
     {
@@ -109,6 +110,13 @@ export default async function MemberDashboardPage() {
                 <div className="rounded-[24px] border border-[var(--border)] bg-white px-4 py-4 md:px-5">
                   <p className="text-xs font-medium uppercase tracking-[0.18em] text-[var(--muted)]">Registered mobile</p>
                   <p className="mt-2 text-base font-semibold text-[var(--foreground)] md:text-lg">{formatMobile(member.currentMobile)}</p>
+                  {linkedMembers.length > 1 ? (
+                    <p className="mt-2 text-xs leading-5 text-[var(--muted)]">
+                      {mobileOwner
+                        ? "This profile is currently the login owner for the shared family mobile number."
+                        : "This mobile number is shared and still needs ownership cleanup."}
+                    </p>
+                  ) : null}
                 </div>
                 <div className="rounded-[24px] border border-[var(--border)] bg-white px-4 py-4 md:px-5">
                   <p className="text-xs font-medium uppercase tracking-[0.18em] text-[var(--muted)]">Email</p>
