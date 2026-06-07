@@ -35,7 +35,12 @@ export function MemberVerificationWizard({
           title: "Mobile number verification / change",
           description: "Verify or change the registered mobile number for this account.",
           done: member.verification.mobileVerified,
-          render: <MobileChangeForm />,
+          render: (
+            <MobileChangeForm
+              initialMobile={member.currentMobile}
+              verified={member.verification.mobileVerified}
+            />
+          ),
         },
         {
           key: "email" as const,
@@ -66,6 +71,7 @@ export function MemberVerificationWizard({
     [
       linkedMembers,
       member.email,
+      member.currentMobile,
       member.verification.emailVerified,
       member.verification.mobileVerified,
       member.verification.selfieUploaded,
