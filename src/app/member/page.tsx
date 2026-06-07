@@ -84,6 +84,7 @@ export default async function MemberDashboardPage() {
         linkedMembers={linkedMembers}
         requiresLinkedMemberCleanup={requiresLinkedMemberCleanup}
         selfieItem={selfieItem}
+        selfieUploaded={documents.some((document) => document.documentGroup === "selfie")}
       />
 
     </>

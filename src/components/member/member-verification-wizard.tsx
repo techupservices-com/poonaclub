@@ -4,8 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { EmailVerificationForm } from "@/components/member/email-verification-form";
 import { LinkedMemberManager } from "@/components/member/linked-member-manager";
+import { MemberSelfieUploader } from "@/components/member/member-selfie-uploader";
 import { MobileChangeForm } from "@/components/member/mobile-change-form";
-import { UploadForm } from "@/components/member/upload-form";
 import { StatusChip } from "@/components/shared/status-chip";
 import { VerificationCompleteModal } from "@/components/member/verification-complete-modal";
 import type { MemberWithVerification } from "@/lib/types";
@@ -19,11 +19,13 @@ export function MemberVerificationWizard({
   linkedMembers,
   requiresLinkedMemberCleanup,
   selfieItem,
+  selfieUploaded,
 }: {
   member: MemberWithVerification;
   linkedMembers: MemberWithVerification[];
   requiresLinkedMemberCleanup: boolean;
   selfieItem: { id: string; fileName: string; previewUrl: string | null } | null;
+  selfieUploaded: boolean;
 }) {
   const steps = useMemo(
     () =>
@@ -47,7 +49,7 @@ export function MemberVerificationWizard({
           title: "Selfie upload / replace",
           description: "Upload or replace your selfie to complete this verification step.",
           done: member.verification.selfieUploaded,
-          render: <UploadForm selfie={selfieItem} />,
+          render: <MemberSelfieUploader photoUrl={selfieItem?.previewUrl ?? null} hasSelfie={selfieUploaded} />,
         },
         ...(requiresLinkedMemberCleanup
           ? [
@@ -69,6 +71,7 @@ export function MemberVerificationWizard({
       member.verification.selfieUploaded,
       requiresLinkedMemberCleanup,
       selfieItem,
+      selfieUploaded,
     ],
   );
 
