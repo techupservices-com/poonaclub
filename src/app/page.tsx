@@ -100,10 +100,6 @@ export default function Home() {
                   <span className="font-mono text-xs uppercase tracking-[0.24em] text-[#3c589e]">Step 03</span>
                   <p className="mt-2 leading-6">Upload your selfie for record verification.</p>
                 </div>
-                <div className="soft-card rounded-[24px] border-white/70 bg-white/85 px-4 py-4 text-sm text-[var(--muted)] shadow-sm">
-                  <span className="font-mono text-xs uppercase tracking-[0.24em] text-[#3c589e]">Step 04</span>
-                  <p className="mt-2 leading-6">Verify additional family member records wherever they share the same mobile number.</p>
-                </div>
               </div>
 
               <section className="soft-card rounded-[30px] border-white/70 bg-white/88 p-6 md:p-8">
