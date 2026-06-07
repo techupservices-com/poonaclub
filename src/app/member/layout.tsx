@@ -17,7 +17,7 @@ export default async function MemberLayout({ children }: { children: React.React
   const linkedMembers = await getLinkedMembers(member.id);
   const requiresLinkedMemberCleanup =
     linkedMembers.length > 1 && linkedMembers.some((entry) => !entry.mobileVerified);
-  const totalSteps = requiresLinkedMemberCleanup ? 4 : 4;
+  const totalSteps = requiresLinkedMemberCleanup ? 4 : 3;
   const completedSteps = [
     member.verification.mobileVerified,
     member.verification.emailVerified,
