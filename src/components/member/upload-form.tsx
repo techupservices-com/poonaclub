@@ -113,15 +113,14 @@ export function UploadForm({ selfie }: { selfie?: SelfieItem | null }) {
             type="button"
             onClick={() => inputRef.current?.click()}
             disabled={isUploading}
-            className="relative flex max-w-[260px] max-h-[300px] items-center justify-center overflow-hidden rounded-[22px] border border-[var(--border)] bg-[#eef2fb] text-left disabled:opacity-60"
+            className="relative flex aspect-[4/5] w-[180px] items-center justify-center overflow-hidden rounded-[22px] border border-[var(--border)] bg-[#eef2fb] text-left disabled:opacity-60 sm:w-[210px] md:w-[220px]"
           >
             <Image
               src={currentPreview}
               alt="Selfie preview"
-              width={800}
-              height={800}
+              fill
               unoptimized
-              className="h-auto max-h-full w-full rounded-[22px] object-cover"
+              className="rounded-[22px] object-cover"
             />
           </button>
         ) : null}
