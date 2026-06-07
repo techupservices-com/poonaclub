@@ -101,7 +101,7 @@ export function MemberOtpForm() {
           </div>
           <button
             type="button"
-            onClick={() => router.push(`/login/member?identifier=${encodeURIComponent(identifier)}`)}
+            onClick={() => router.push(`/?identifier=${encodeURIComponent(identifier)}`)}
             className="rounded-full border border-[#b9c8ea] bg-white px-4 py-2 text-sm font-semibold text-[#3c589e] hover:border-[#6f84ba] hover:bg-[#dfe6f8]"
           >
             Edit

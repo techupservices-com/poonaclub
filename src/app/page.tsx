@@ -1,7 +1,13 @@
 import Image from "next/image";
 import { MemberLoginForm } from "@/components/auth/member-login-form";
 
-export default function Home() {
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<{ identifier?: string }>;
+}) {
+  const params = await searchParams;
+
   return (
     <div className="min-h-screen px-4 py-4 md:px-6 md:py-6">
       <div className="mx-auto max-w-7xl">
@@ -107,7 +113,7 @@ export default function Home() {
                 <h2 className="mt-3 text-3xl font-semibold tracking-[-0.03em]">Access your account</h2>
                 <p className="mt-3 text-sm leading-6 text-[var(--muted)]">Enter your registered mobile number or email address to receive your OTP and continue with the verification process.</p>
                 <div className="mt-6">
-                  <MemberLoginForm />
+                  <MemberLoginForm initialIdentifier={params.identifier ?? ""} />
                 </div>
               </section>
             </div>
