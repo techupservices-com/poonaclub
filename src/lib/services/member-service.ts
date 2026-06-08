@@ -203,8 +203,14 @@ export async function findVerifiedEmailOwner(email: string, excludeProfileId?: s
 export async function getLinkedMembers(profileId: string) {
   const member = await getMemberById(profileId);
   if (!member) return [];
-  const members = await listMembersWithVerification();
-  return members.filter((entry) => normalizeMobile(entry.currentMobile) === normalizeMobile(member.currentMobile));
+  const normalizedMobile = normalizeMobile(member.currentMobile);
+  if (!normalizedMobile) return [member];
+
+  const client = getRequiredSupabaseClient();
+  const profileRowsRes = await client.from("profiles").select("id").eq("current_mobile", normalizedMobile);
+  if (profileRowsRes.error) throw profileRowsRes.error;
+  const profileIds = (profileRowsRes.data ?? []).map((row) => row.id as string);
+  return getMembersByIdsWithVerification(profileIds);
 }
 
 export async function updateMember(profileId: string, updates: Partial<MemberProfile>) {
