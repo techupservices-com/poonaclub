@@ -1,35 +1,13 @@
 import Link from "next/link";
+import { AdminRecentAuditPreview } from "@/components/admin/admin-recent-audit-preview";
 import { AvatarBadge } from "@/components/shared/avatar-badge";
-import { getAdminOverviewSummary, listAuditLogs } from "@/lib/data";
-import { formatMobile } from "@/lib/utils";
+import { getAdminOverviewSummary, getRecentAuditPreviewData } from "@/lib/data";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminOverviewPage() {
   const { totalMembers, verified, sharedMobileGroups, needsAction, members } = await getAdminOverviewSummary();
-  const auditLogs = (await listAuditLogs()).slice(0, 4);
-  const memberMap = new Map(
-    members.map((member) => [
-      member.id,
-      {
-        memberName: member.fullName,
-        membershipId: member.membershipId,
-        mobile: member.currentMobile,
-      },
-    ]),
-  );
-  const recentAuditItems = auditLogs.map((entry) => {
-    const target = memberMap.get(entry.targetProfileId);
-    return {
-      id: entry.id,
-      action: entry.action,
-      actorType: entry.actorType,
-      createdAt: entry.createdAt,
-      memberName: target?.memberName ?? "Unknown member",
-      membershipId: target?.membershipId ?? entry.targetProfileId,
-      mobile: target?.mobile ?? "",
-    };
-  });
+  const recentAuditItems = (await getRecentAuditPreviewData(4)).items;
 
   return (
     <>
@@ -65,23 +43,7 @@ export default async function AdminOverviewPage() {
           </div>
         </div>
 
-        <div className="soft-card rounded-[28px] p-6">
-          <p className="font-mono text-xs uppercase tracking-[0.24em] text-[#3c589e]">Recent activity</p>
-          <h2 className="mt-2 text-2xl font-semibold">Recent audit events</h2>
-          <div className="mt-6 space-y-3">
-            {recentAuditItems.length === 0 ? <p className="text-sm text-[var(--muted)]">No admin changes recorded yet.</p> : recentAuditItems.map((entry) => (
-              <div key={entry.id} className="rounded-[24px] border border-[var(--border)] bg-white px-4 py-4">
-                <p className="font-medium">{entry.action}</p>
-                <p className="mt-1 text-sm text-[var(--foreground)]">
-                  {entry.memberName} · {entry.membershipId} · {formatMobile(entry.mobile)}
-                </p>
-                <p className="mt-1 text-xs text-[var(--muted)]">
-                  {entry.actorType} · {new Date(entry.createdAt).toLocaleString("en-IN")}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
+        <AdminRecentAuditPreview initialItems={recentAuditItems} />
       </section>
     </>
   );

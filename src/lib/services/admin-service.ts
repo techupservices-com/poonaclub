@@ -173,6 +173,31 @@ export async function getAuditHistoryData({ page, pageSize }: { page: number; pa
   return { items, total };
 }
 
+export async function getRecentAuditPreviewData(limit: number) {
+  const audits = await listAuditLogs();
+  const pageAudits = audits.slice(0, limit);
+  const targetIds = [...new Set(pageAudits.map((entry) => entry.targetProfileId))];
+  const members = await getMembersByIdsBasic(targetIds);
+  const memberMap = new Map(
+    members.map((member) => [member.id, { memberName: member.fullName, membershipId: member.membershipId, mobile: member.currentMobile }]),
+  );
+
+  const items = pageAudits.map((entry) => {
+    const target = memberMap.get(entry.targetProfileId);
+    return {
+      id: entry.id,
+      action: entry.action,
+      actorType: entry.actorType,
+      createdAt: entry.createdAt,
+      memberName: target?.memberName ?? "Unknown member",
+      membershipId: target?.membershipId ?? entry.targetProfileId,
+      mobile: target?.mobile ?? "",
+    };
+  });
+
+  return { items };
+}
+
 export async function getSelfieQueueData({ page, pageSize }: { page: number; pageSize: number }) {
   const summary = await listVerificationSummary();
   if (summary) {
