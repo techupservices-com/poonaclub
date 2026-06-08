@@ -3,6 +3,16 @@ import { getMembersByIdsBasic, getMembersByIdsWithVerification, listMembersWithV
 import type { MemberWithVerification } from "@/lib/types";
 import { fetchAllRows, type MemberVerificationSummaryRow } from "@/lib/services/shared-db";
 
+const IST_DATE_TIME_FORMATTER = new Intl.DateTimeFormat("en-IN", {
+  dateStyle: "short",
+  timeStyle: "medium",
+  timeZone: "Asia/Kolkata",
+});
+
+function formatAuditTimestampToIST(value: string) {
+  return IST_DATE_TIME_FORMATTER.format(new Date(value));
+}
+
 async function listVerificationSummary() {
   try {
     return await fetchAllRows<MemberVerificationSummaryRow>("member_verification_summary", "*", "full_name");
@@ -163,7 +173,7 @@ export async function getAuditHistoryData({ page, pageSize }: { page: number; pa
       action: entry.action,
       actorType: entry.actorType,
       createdAt: entry.createdAt,
-      formattedCreatedAt: new Date(entry.createdAt).toLocaleString("en-IN"),
+      formattedCreatedAt: formatAuditTimestampToIST(entry.createdAt),
       targetProfileId: entry.targetProfileId,
       memberName: target?.memberName ?? "Unknown member",
       membershipId: target?.membershipId ?? entry.targetProfileId,
@@ -190,7 +200,7 @@ export async function getRecentAuditPreviewData(limit: number) {
       action: entry.action,
       actorType: entry.actorType,
       createdAt: entry.createdAt,
-      formattedCreatedAt: new Date(entry.createdAt).toLocaleString("en-IN"),
+      formattedCreatedAt: formatAuditTimestampToIST(entry.createdAt),
       memberName: target?.memberName ?? "Unknown member",
       membershipId: target?.membershipId ?? entry.targetProfileId,
       mobile: target?.mobile ?? "",
