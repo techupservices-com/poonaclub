@@ -8,7 +8,7 @@ export const OTP_LENGTH = 4;
 export const SELFIE_BUCKET = "member-selfies";
 export const DOCUMENT_BUCKET = "member-documents";
 
-export const DEFAULT_ADMIN_EMAIL = "admin@techiemiran.in";
+export const DEFAULT_ADMIN_EMAIL = "admin@pclprofile.com";
 export const DEFAULT_ADMIN_PASSWORD = "Admin@2204";
 
 export const APP_NAME = "Poona Club";
