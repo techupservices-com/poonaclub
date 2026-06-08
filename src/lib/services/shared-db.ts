@@ -72,6 +72,23 @@ export interface MobileLoginOwnerRow {
   updated_at: string;
 }
 
+export interface MemberVerificationSummaryRow {
+  profile_id: string;
+  membership_id: string;
+  full_name: string;
+  current_mobile: string | null;
+  email: string | null;
+  mobile_verified: boolean;
+  email_verified: boolean;
+  selfie_uploaded: boolean;
+  profile_complete: boolean;
+  shared_mobile_count: number;
+  owner_profile_id: string | null;
+  is_mobile_login_owner: boolean;
+  shared_mobile_pending: boolean;
+  completed: boolean;
+}
+
 export function getRequiredSupabaseClient() {
   const client = createServerSupabaseClient();
   if (!client) {

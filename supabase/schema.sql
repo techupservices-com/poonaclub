@@ -91,3 +91,51 @@ select
   exists(select 1 from member_documents d where d.profile_id = p.id and d.document_type = 'selfie') as selfie_uploaded,
   exists(select 1 from member_documents d where d.profile_id = p.id and d.document_type = 'document') as document_uploaded
 from profiles p;
+
+create or replace view member_verification_summary as
+with selfie_docs as (
+  select profile_id, true as selfie_uploaded
+  from member_documents
+  where document_type = 'selfie'
+  group by profile_id
+),
+shared_mobile_groups as (
+  select current_mobile as mobile, count(*) as shared_mobile_count
+  from profiles
+  where current_mobile is not null and current_mobile <> ''
+  group by current_mobile
+),
+mobile_owners as (
+  select mobile, profile_id as owner_profile_id
+  from mobile_login_owners
+)
+select
+  p.id as profile_id,
+  p.membership_id,
+  p.full_name,
+  p.current_mobile,
+  p.email,
+  p.mobile_verified,
+  p.email_verified,
+  coalesce(sd.selfie_uploaded, false) as selfie_uploaded,
+  (p.membership_id is not null and p.full_name is not null and p.email is not null and p.current_mobile is not null) as profile_complete,
+  coalesce(smg.shared_mobile_count, 0) as shared_mobile_count,
+  mo.owner_profile_id,
+  case when mo.owner_profile_id = p.id then true else false end as is_mobile_login_owner,
+  case
+    when coalesce(smg.shared_mobile_count, 0) > 1 and mo.owner_profile_id is distinct from p.id then true
+    else false
+  end as shared_mobile_pending,
+  (
+    p.mobile_verified
+    and p.email_verified
+    and coalesce(sd.selfie_uploaded, false)
+    and (p.membership_id is not null and p.full_name is not null and p.email is not null and p.current_mobile is not null)
+    and not (
+      coalesce(smg.shared_mobile_count, 0) > 1 and mo.owner_profile_id is distinct from p.id
+    )
+  ) as completed
+from profiles p
+left join selfie_docs sd on sd.profile_id = p.id
+left join shared_mobile_groups smg on smg.mobile = p.current_mobile
+left join mobile_owners mo on mo.mobile = p.current_mobile;

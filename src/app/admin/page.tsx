@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { AvatarBadge } from "@/components/shared/avatar-badge";
-import { listAuditLogs, listMembersWithVerification } from "@/lib/data";
+import { getAdminOverviewSummary, listAuditLogs } from "@/lib/data";
 import { formatMobile } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminOverviewPage() {
-  const members = await listMembersWithVerification();
+  const { totalMembers, verified, sharedMobileGroups, needsAction, members } = await getAdminOverviewSummary();
   const auditLogs = (await listAuditLogs()).slice(0, 4);
   const memberMap = new Map(
     members.map((member) => [
@@ -34,10 +34,10 @@ export default async function AdminOverviewPage() {
   return (
     <>
       <section className="grid gap-4 md:grid-cols-4">
-        <div className="soft-card rounded-[26px] p-5"><p className="font-mono text-xs uppercase tracking-[0.24em] text-[#3c589e]">Total members</p><p className="mt-3 text-4xl font-semibold">{members.length}</p></div>
-        <div className="soft-card rounded-[26px] p-5"><p className="font-mono text-xs uppercase tracking-[0.24em] text-[#3c589e]">Verified</p><p className="mt-3 text-4xl font-semibold">{members.filter((member) => member.verification.completed).length}</p></div>
-        <div className="soft-card rounded-[26px] p-5"><p className="font-mono text-xs uppercase tracking-[0.24em] text-[#3c589e]">Shared mobile groups</p><p className="mt-3 text-4xl font-semibold">{new Set(members.filter((member) => member.linkedMemberCount > 1).map((member) => member.currentMobile)).size}</p></div>
-        <div className="soft-card rounded-[26px] p-5"><p className="font-mono text-xs uppercase tracking-[0.24em] text-[#3c589e]">Needs action</p><p className="mt-3 text-4xl font-semibold">{members.filter((member) => !member.verification.completed).length}</p></div>
+        <div className="soft-card rounded-[26px] p-5"><p className="font-mono text-xs uppercase tracking-[0.24em] text-[#3c589e]">Total members</p><p className="mt-3 text-4xl font-semibold">{totalMembers}</p></div>
+        <div className="soft-card rounded-[26px] p-5"><p className="font-mono text-xs uppercase tracking-[0.24em] text-[#3c589e]">Verified</p><p className="mt-3 text-4xl font-semibold">{verified}</p></div>
+        <div className="soft-card rounded-[26px] p-5"><p className="font-mono text-xs uppercase tracking-[0.24em] text-[#3c589e]">Shared mobile groups</p><p className="mt-3 text-4xl font-semibold">{sharedMobileGroups}</p></div>
+        <div className="soft-card rounded-[26px] p-5"><p className="font-mono text-xs uppercase tracking-[0.24em] text-[#3c589e]">Needs action</p><p className="mt-3 text-4xl font-semibold">{needsAction}</p></div>
       </section>
 
       <section className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
