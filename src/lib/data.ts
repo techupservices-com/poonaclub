@@ -4,6 +4,8 @@ import type { AuditLog, MemberDocument, MemberProfile, MemberWithVerification, M
 import { generateId, normalizeMobile } from "@/lib/utils";
 import { computeVerification } from "@/lib/verification";
 
+const DB_BATCH_SIZE = 1000;
+
 interface ProfileRow {
   id: string;
   membership_id: string;
@@ -177,35 +179,38 @@ async function createSignedStorageUrl(bucket: string, filePath: string) {
   return data.signedUrl;
 }
 
-async function getProfilesAndDocuments() {
+async function fetchAllRows<T>(table: string, select: string, orderColumn?: string) {
   const client = getRequiredSupabaseClient();
+  const rows: T[] = [];
+  let from = 0;
 
-  const [
-    { data: profiles, error: profilesError },
-    { data: documents, error: documentsError },
-    { data: otpRequests, error: otpRequestsError },
-  ] = await Promise.all([
-    client.from("profiles").select("*").order("full_name"),
-    client.from("member_documents").select("*"),
-    client.from("audit_logs").select("target_profile_id,action"),
+  while (true) {
+    let query = client.from(table).select(select).range(from, from + DB_BATCH_SIZE - 1);
+    if (orderColumn) {
+      query = query.order(orderColumn);
+    }
+    const { data, error } = await query;
+    if (error) throw error;
+    const batch = (data ?? []) as T[];
+    rows.push(...batch);
+    if (batch.length < DB_BATCH_SIZE) break;
+    from += DB_BATCH_SIZE;
+  }
+
+  return rows;
+}
+
+async function getProfilesAndDocuments() {
+  const [profiles, documents, otpRequests] = await Promise.all([
+    fetchAllRows<ProfileRow>("profiles", "*", "full_name"),
+    fetchAllRows<DocumentRow>("member_documents", "*"),
+    fetchAllRows<OtpRequestRow>("audit_logs", "target_profile_id,action"),
   ]);
 
-  if (profilesError) {
-    throw profilesError;
-  }
-
-  if (documentsError) {
-    throw documentsError;
-  }
-
-  if (otpRequestsError) {
-    throw otpRequestsError;
-  }
-
   return {
-    profiles: (profiles ?? []) as ProfileRow[],
-    documents: (documents ?? []) as DocumentRow[],
-    otpRequests: (otpRequests ?? []) as OtpRequestRow[],
+    profiles,
+    documents,
+    otpRequests,
   };
 }
 
@@ -363,6 +368,82 @@ export async function isMobileLoginOwner(profileId: string, mobile: string) {
 export async function listMembersWithVerification() {
   const result = await getProfilesAndDocuments();
   return await buildMembersWithVerification(result.profiles, result.documents, result.otpRequests);
+}
+
+function matchesMemberFilters(
+  member: MemberWithVerification,
+  query: string,
+  filters: Array<"verified" | "pending" | "shared">,
+) {
+  const value = query.trim().toLowerCase();
+  const matchesQuery =
+    !value ||
+    [member.fullName, member.membershipId, member.currentMobile, member.email].join(" ").toLowerCase().includes(value);
+
+  const matchesFilter =
+    filters.length === 0 ||
+    filters.every((filter) => {
+      if (filter === "verified") return member.verification.completed;
+      if (filter === "pending") return !member.verification.completed;
+      if (filter === "shared") return member.linkedMemberCount > 1;
+      return true;
+    });
+
+  return matchesQuery && matchesFilter;
+}
+
+function sortMembers(
+  members: MemberWithVerification[],
+  sort: string,
+) {
+  const copy = [...members];
+  copy.sort((left, right) => {
+    switch (sort) {
+      case "name_desc":
+        return right.fullName.localeCompare(left.fullName);
+      case "membership_asc":
+        return left.membershipId.localeCompare(right.membershipId);
+      case "membership_desc":
+        return right.membershipId.localeCompare(left.membershipId);
+      case "updated_desc":
+        return right.joinedAt.localeCompare(left.joinedAt);
+      case "name_asc":
+      default:
+        return left.fullName.localeCompare(right.fullName);
+    }
+  });
+  return copy;
+}
+
+export async function getMemberDirectoryData({
+  page,
+  pageSize,
+  query,
+  filters,
+  sort,
+}: {
+  page: number;
+  pageSize: number;
+  query: string;
+  filters: Array<"verified" | "pending" | "shared">;
+  sort: string;
+}) {
+  const members = await listMembersWithVerification();
+  const filtered = sortMembers(members.filter((member) => matchesMemberFilters(member, query, filters)), sort);
+  const total = filtered.length;
+  const start = (page - 1) * pageSize;
+  const pagedMembers = filtered.slice(start, start + pageSize);
+
+  return {
+    members: pagedMembers,
+    total,
+    counts: {
+      all: members.filter((member) => matchesMemberFilters(member, query, [])).length,
+      verified: members.filter((member) => matchesMemberFilters(member, query, ["verified"])).length,
+      pending: members.filter((member) => matchesMemberFilters(member, query, ["pending"])).length,
+      shared: members.filter((member) => matchesMemberFilters(member, query, ["shared"])).length,
+    },
+  };
 }
 
 export async function getMemberById(id: string) {
@@ -697,11 +778,50 @@ export async function completeMobileChangeRequest(id: string) {
 }
 
 export async function listAuditLogs() {
-  const client = getRequiredSupabaseClient();
+  const rows = await fetchAllRows<AuditRow>("audit_logs", "*", "created_at");
+  return rows.map(mapAudit).reverse();
+}
 
-  const { data, error } = await client.from("audit_logs").select("*").order("created_at", { ascending: false });
-  if (error) throw error;
-  return ((data ?? []) as AuditRow[]).map(mapAudit);
+export async function getAuditHistoryData({ page, pageSize }: { page: number; pageSize: number }) {
+  const audits = await listAuditLogs();
+  const members = await listMembersWithVerification();
+  const memberMap = new Map(
+    members.map((member) => [member.id, { memberName: member.fullName, membershipId: member.membershipId, mobile: member.currentMobile }]),
+  );
+
+  const items = audits.map((entry) => {
+    const target = memberMap.get(entry.targetProfileId);
+    return {
+      id: entry.id,
+      action: entry.action,
+      actorType: entry.actorType,
+      createdAt: entry.createdAt,
+      targetProfileId: entry.targetProfileId,
+      memberName: target?.memberName ?? "Unknown member",
+      membershipId: target?.membershipId ?? entry.targetProfileId,
+      mobile: target?.mobile ?? "",
+    };
+  });
+
+  const total = items.length;
+  const start = (page - 1) * pageSize;
+  return { items: items.slice(start, start + pageSize), total };
+}
+
+export async function getSelfieQueueData({ page, pageSize }: { page: number; pageSize: number }) {
+  const members = await listMembersWithVerification();
+  const pending = members.filter((member) => !member.verification.selfieUploaded);
+  const total = pending.length;
+  const start = (page - 1) * pageSize;
+  return {
+    items: pending.slice(start, start + pageSize).map((member) => ({
+      id: member.id,
+      fullName: member.fullName,
+      membershipId: member.membershipId,
+      selfieUploaded: member.verification.selfieUploaded,
+    })),
+    total,
+  };
 }
 
 export async function addAuditLog(log: Omit<AuditLog, "id" | "createdAt">) {

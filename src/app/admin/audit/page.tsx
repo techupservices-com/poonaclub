@@ -1,33 +1,22 @@
 import { AdminAuditHistory } from "@/components/admin/admin-audit-history";
-import { listAuditLogs, listMembersWithVerification } from "@/lib/data";
+import { PAGE_SIZE } from "@/lib/constants";
+import { getAuditHistoryData } from "@/lib/data";
 
-export default async function AdminAuditPage() {
-  const audits = await listAuditLogs();
-  const members = await listMembersWithVerification();
-  const memberMap = new Map(
-    members.map((member) => [
-      member.id,
-      {
-        memberName: member.fullName,
-        membershipId: member.membershipId,
-        mobile: member.currentMobile,
-      },
-    ]),
+export default async function AdminAuditPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
+  const params = await searchParams;
+  const page = Math.max(1, Number(params.page ?? 1) || 1);
+  const data = await getAuditHistoryData({ page, pageSize: PAGE_SIZE });
+
+  return (
+    <AdminAuditHistory
+      items={data.items}
+      total={data.total}
+      currentPage={page}
+      pageSize={PAGE_SIZE}
+    />
   );
-
-  const items = audits.map((entry) => {
-    const target = memberMap.get(entry.targetProfileId);
-    return {
-      id: entry.id,
-      action: entry.action,
-      actorType: entry.actorType,
-      createdAt: entry.createdAt,
-      targetProfileId: entry.targetProfileId,
-      memberName: target?.memberName ?? "Unknown member",
-      membershipId: target?.membershipId ?? entry.targetProfileId,
-      mobile: target?.mobile ?? "",
-    };
-  });
-
-  return <AdminAuditHistory items={items} />;
 }
