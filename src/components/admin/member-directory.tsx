@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { RefreshCw } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { AvatarBadge } from "@/components/shared/avatar-badge";
 import { StatusChip } from "@/components/shared/status-chip";
+import { useVisiblePolling } from "@/hooks/use-visible-polling";
 import type { MemberWithVerification } from "@/lib/types";
 import { cn, formatMobile } from "@/lib/utils";
 
@@ -33,7 +35,41 @@ export function MemberDirectory({
 }) {
   const router = useRouter();
   const [search, setSearch] = useState(query);
+  const [currentMembers, setCurrentMembers] = useState(members);
+  const [currentCounts, setCurrentCounts] = useState(counts);
+  const [currentTotal, setCurrentTotal] = useState(total);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
+
+  const refresh = useCallback(async () => {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    setError(null);
+    try {
+      const params = new URLSearchParams();
+      if (currentPage > 1) params.set("page", String(currentPage));
+      if (query) params.set("q", query);
+      if (filters.length) params.set("filters", filters.join(","));
+      if (view !== "grid") params.set("view", view);
+      if (sort !== "name_asc") params.set("sort", sort);
+      const response = await fetch(`/api/admin/members${params.toString() ? `?${params.toString()}` : ""}`, { cache: "no-store" });
+      const payload = await response.json();
+      if (!response.ok) {
+        setError(payload.error ?? "Unable to refresh members right now. Please try again.");
+        return;
+      }
+      setCurrentMembers(payload.members ?? []);
+      setCurrentCounts(payload.counts ?? currentCounts);
+      setCurrentTotal(payload.total ?? currentTotal);
+    } catch {
+      setError("Unable to refresh members right now. Please try again.");
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [currentPage, currentCounts, currentTotal, filters, isRefreshing, query, sort, view]);
+
+  useVisiblePolling(30000, refresh);
 
   function updateParams(next: {
     page?: number;
@@ -133,6 +169,15 @@ export function MemberDirectory({
           </div>
           <div className="flex flex-col gap-3 lg:items-end">
             <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => void refresh()}
+                disabled={isRefreshing}
+                className="inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--foreground)] hover:border-[#6f84ba] hover:bg-[#eef2fb] disabled:opacity-60"
+              >
+                <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
+                {isRefreshing ? "Refreshing..." : "Refresh"}
+              </button>
               <button onClick={() => updateParams({ view: "grid" })} className={cn("rounded-full border px-4 py-2 text-sm font-medium", view === "grid" ? "border-[#6f84ba] bg-[#3c589e] text-white" : "border-[var(--border)] bg-white text-[var(--foreground)]")}>Grid</button>
               <button onClick={() => updateParams({ view: "list" })} className={cn("rounded-full border px-4 py-2 text-sm font-medium", view === "list" ? "border-[#6f84ba] bg-[#3c589e] text-white" : "border-[var(--border)] bg-white text-[var(--foreground)]")}>List</button>
             </div>
@@ -141,7 +186,7 @@ export function MemberDirectory({
       </div>
 
       <div className={cn("grid gap-4", view === "grid" ? "md:grid-cols-2 xl:grid-cols-3" : "grid-cols-1")}>
-        {members.map((member) => (
+        {currentMembers.map((member) => (
           <article key={member.id} className={cn("soft-card rounded-[24px] p-5", view === "list" && "md:flex md:items-start md:justify-between md:gap-6")}>
             {view === "grid" ? (
               <>
@@ -192,7 +237,7 @@ export function MemberDirectory({
         ))}
       </div>
 
-      {members.length === 0 ? (
+      {currentMembers.length === 0 ? (
         <div className="rounded-[24px] border border-dashed border-[var(--border)] bg-white/70 px-4 py-8 text-center text-sm text-[var(--muted)]">
           No members match this search. Try a different name, membership ID, or mobile number.
         </div>
@@ -200,13 +245,14 @@ export function MemberDirectory({
 
       <div className="flex flex-col gap-3 rounded-[24px] border border-[var(--border)] bg-white/80 px-4 py-4 md:flex-row md:items-center md:justify-between">
         <p className="text-sm text-[var(--muted)]">
-          Showing {(currentPage - 1) * pageSize + 1}-{Math.min(currentPage * pageSize, total)} of {total} members
+          Showing {(currentPage - 1) * pageSize + 1}-{Math.min(currentPage * pageSize, currentTotal)} of {currentTotal} members
         </p>
         <div className="flex gap-2">
           <button disabled={currentPage === 1} onClick={() => updateParams({ page: Math.max(1, currentPage - 1) })} className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm text-[var(--foreground)] disabled:opacity-50">Previous</button>
           <button disabled={currentPage === pageCount} onClick={() => updateParams({ page: Math.min(pageCount, currentPage + 1) })} className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm text-[var(--foreground)] disabled:opacity-50">Next</button>
         </div>
       </div>
+      {error ? <p className="text-sm font-semibold text-red-600">{error}</p> : null}
     </div>
   );
 }

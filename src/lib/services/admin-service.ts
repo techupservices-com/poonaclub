@@ -264,3 +264,30 @@ export async function getAdminOverviewSummary() {
     members,
   };
 }
+
+export async function getMemberPreviewData(limit: number) {
+  const summary = await listVerificationSummary();
+  if (summary) {
+    const members = await getMembersByIdsWithVerification(summary.slice(0, limit).map((row) => row.profile_id));
+    return {
+      members: members.map((member) => ({
+        id: member.id,
+        fullName: member.fullName,
+        membershipId: member.membershipId,
+        currentMobile: member.currentMobile,
+        photoUrl: member.photoUrl,
+      })),
+    };
+  }
+
+  const members = await listMembersWithVerification();
+  return {
+    members: members.slice(0, limit).map((member) => ({
+      id: member.id,
+      fullName: member.fullName,
+      membershipId: member.membershipId,
+      currentMobile: member.currentMobile,
+      photoUrl: member.photoUrl,
+    })),
+  };
+}
