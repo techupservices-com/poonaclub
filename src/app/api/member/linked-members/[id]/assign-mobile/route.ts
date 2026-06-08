@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { getMemberSession } from "@/lib/auth";
-import { createMobileChangeRequest, getMemberById } from "@/lib/data";
+import { createMobileChangeRequest, findVerifiedMobileOwner, getMemberById } from "@/lib/data";
 import { createOtp } from "@/lib/otp-store";
 import { sendSmsOtp } from "@/lib/sms";
 import { sendOtpMessage } from "@/lib/techup";
@@ -17,6 +17,13 @@ export async function POST(request: Request, context: RouteContext<"/api/member/
   const schema = z.object({ newMobile: z.string().min(10) });
   const body = schema.parse(await request.json());
   const normalized = normalizeMobile(body.newMobile);
+  const verifiedOwner = await findVerifiedMobileOwner(normalized, member.id);
+  if (verifiedOwner) {
+    return Response.json(
+      { error: "This mobile number is already linked to another verified member account. Please use another mobile number." },
+      { status: 400 },
+    );
+  }
   const requestRecord = await createMobileChangeRequest({
     profileId: member.id,
     oldMobile: member.currentMobile,

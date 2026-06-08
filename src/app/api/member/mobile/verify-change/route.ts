@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { getMemberSession } from "@/lib/auth";
-import { addAuditLog, completeMobileChangeRequest, getMobileChangeRequest, reassignMobileLoginOwnerIfNeeded, setMobileLoginOwner } from "@/lib/data";
+import { addAuditLog, completeMobileChangeRequest, findVerifiedMobileOwner, getMobileChangeRequest, reassignMobileLoginOwnerIfNeeded, setMobileLoginOwner } from "@/lib/data";
 import { verifyOtp } from "@/lib/otp-store";
 
 export async function POST(request: Request) {
@@ -14,6 +14,14 @@ export async function POST(request: Request) {
 
   const result = await verifyOtp(session.subject, "mobile_change", body.otp, body.requestId);
   if (!result.ok) return Response.json({ error: result.reason }, { status: 400 });
+
+  const verifiedOwner = await findVerifiedMobileOwner(requestRecord.newMobile, requestRecord.profileId);
+  if (verifiedOwner) {
+    return Response.json(
+      { error: "This mobile number is already linked to another verified member account. Please use another mobile number." },
+      { status: 400 },
+    );
+  }
 
   await completeMobileChangeRequest(body.requestId);
   await setMobileLoginOwner(requestRecord.newMobile, requestRecord.profileId);

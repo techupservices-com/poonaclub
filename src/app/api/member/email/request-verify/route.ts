@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { getMemberSession } from "@/lib/auth";
-import { addAuditLog, getMemberById, updateMember } from "@/lib/data";
+import { addAuditLog, findVerifiedEmailOwner, getMemberById, updateMember } from "@/lib/data";
 import { sendEmailOtp } from "@/lib/email";
 import { createOtp } from "@/lib/otp-store";
 
@@ -12,6 +12,14 @@ export async function POST(request: Request) {
   const body = schema.parse(await request.json());
   const member = await getMemberById(session.subject);
   if (!member) return Response.json({ error: "Member not found." }, { status: 404 });
+
+  const verifiedOwner = await findVerifiedEmailOwner(body.email, member.id);
+  if (verifiedOwner) {
+    return Response.json(
+      { error: "This email address is already linked to another verified member account. Please use another email address." },
+      { status: 400 },
+    );
+  }
 
   await updateMember(member.id, { email: body.email });
   const { record, code } = await createOtp(member.id, body.email, "email_verify", "email", "email");

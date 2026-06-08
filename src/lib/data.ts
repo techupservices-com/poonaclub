@@ -404,6 +404,34 @@ export async function findMemberByEmail(email: string) {
   return mapProfile(data as ProfileRow);
 }
 
+export async function findVerifiedMobileOwner(mobile: string, excludeProfileId?: string) {
+  const normalized = normalizeMobile(mobile);
+  if (!normalized) return null;
+  const members = await listMembersWithVerification();
+  return (
+    members.find(
+      (member) =>
+        member.id !== excludeProfileId &&
+        normalizeMobile(member.currentMobile) === normalized &&
+        member.verification.mobileVerified,
+    ) ?? null
+  );
+}
+
+export async function findVerifiedEmailOwner(email: string, excludeProfileId?: string) {
+  const normalized = email.trim().toLowerCase();
+  if (!normalized) return null;
+  const members = await listMembersWithVerification();
+  return (
+    members.find(
+      (member) =>
+        member.id !== excludeProfileId &&
+        member.email.trim().toLowerCase() === normalized &&
+        member.verification.emailVerified,
+    ) ?? null
+  );
+}
+
 export async function getLinkedMembers(profileId: string) {
   const member = await getMemberById(profileId);
   if (!member) return [];

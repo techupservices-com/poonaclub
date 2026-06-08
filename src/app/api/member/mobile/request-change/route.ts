@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { getMemberSession } from "@/lib/auth";
-import { createMobileChangeRequest, getMemberById } from "@/lib/data";
+import { createMobileChangeRequest, findVerifiedMobileOwner, getMemberById } from "@/lib/data";
 import { createOtp } from "@/lib/otp-store";
 import { sendSmsOtp } from "@/lib/sms";
 import { sendOtpMessage } from "@/lib/techup";
@@ -15,26 +15,35 @@ export async function POST(request: Request) {
   const member = await getMemberById(session.subject);
   if (!member) return Response.json({ error: "Member not found." }, { status: 404 });
 
+  const normalizedMobile = normalizeMobile(body.newMobile);
+  const verifiedOwner = await findVerifiedMobileOwner(normalizedMobile, member.id);
+  if (verifiedOwner) {
+    return Response.json(
+      { error: "This mobile number is already linked to another verified member account. Please use another mobile number." },
+      { status: 400 },
+    );
+  }
+
   const requestRecord = await createMobileChangeRequest({
     profileId: member.id,
     oldMobile: member.currentMobile,
-    newMobile: normalizeMobile(body.newMobile),
+    newMobile: normalizedMobile,
     status: "pending",
     requestedByProfileId: member.id,
     purpose: "mobile_change",
   });
   const { code } = await createOtp(
     member.id,
-    normalizeMobile(body.newMobile),
+    normalizedMobile,
     "mobile_change",
     "mobile",
     "mobile",
     requestRecord.id,
   );
   const delivery = await Promise.all([
-    sendSmsOtp({ mobile: normalizeMobile(body.newMobile), otp: code }),
+    sendSmsOtp({ mobile: normalizedMobile, otp: code }),
     sendOtpMessage({
-      mobile: normalizeMobile(body.newMobile),
+      mobile: normalizedMobile,
       otp: code,
       memberName: member.fullName,
       purpose: "mobile_change",
@@ -44,7 +53,7 @@ export async function POST(request: Request) {
 
   return Response.json({
     requestId: requestRecord.id,
-    mobile: normalizeMobile(body.newMobile),
+    mobile: normalizedMobile,
     previewCode: "previewCode" in delivery ? delivery.previewCode : undefined,
   });
 }
