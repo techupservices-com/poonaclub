@@ -2,6 +2,8 @@ import { MemberDirectory } from "@/components/admin/member-directory";
 import { PAGE_SIZE } from "@/lib/constants";
 import { getMemberDirectoryData } from "@/lib/data";
 
+export const dynamic = "force-dynamic";
+
 function parseFilters(value?: string) {
   return (value?.split(",").filter(Boolean) as Array<"verified" | "pending" | "shared">) ?? [];
 }

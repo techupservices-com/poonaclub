@@ -2,6 +2,8 @@ import { AdminDocumentsQueue } from "@/components/admin/admin-documents-queue";
 import { PAGE_SIZE } from "@/lib/constants";
 import { getSelfieQueueData } from "@/lib/data";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminDocumentsPage({
   searchParams,
 }: {

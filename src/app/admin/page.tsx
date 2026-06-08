@@ -3,6 +3,8 @@ import { AvatarBadge } from "@/components/shared/avatar-badge";
 import { listAuditLogs, listMembersWithVerification } from "@/lib/data";
 import { formatMobile } from "@/lib/utils";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminOverviewPage() {
   const members = await listMembersWithVerification();
   const auditLogs = (await listAuditLogs()).slice(0, 4);
