@@ -1,5 +1,5 @@
 import { listAuditLogs } from "@/lib/services/audit-service";
-import { listMembersWithVerification } from "@/lib/services/member-service";
+import { getMembersByIdsWithVerification, listMembersWithVerification } from "@/lib/services/member-service";
 import type { MemberWithVerification } from "@/lib/types";
 import { fetchAllRows, type MemberVerificationSummaryRow } from "@/lib/services/shared-db";
 
@@ -9,6 +9,47 @@ async function listVerificationSummary() {
   } catch {
     return null;
   }
+}
+
+function matchesSummaryFilters(
+  row: MemberVerificationSummaryRow,
+  query: string,
+  filters: Array<"verified" | "pending" | "shared">,
+) {
+  const value = query.trim().toLowerCase();
+  const matchesQuery =
+    !value || [row.full_name, row.membership_id, row.current_mobile ?? "", row.email ?? ""].join(" ").toLowerCase().includes(value);
+
+  const matchesFilter =
+    filters.length === 0 ||
+    filters.every((filter) => {
+      if (filter === "verified") return row.completed;
+      if (filter === "pending") return !row.completed;
+      if (filter === "shared") return row.shared_mobile_count > 1;
+      return true;
+    });
+
+  return matchesQuery && matchesFilter;
+}
+
+function sortSummary(rows: MemberVerificationSummaryRow[], sort: string) {
+  const copy = [...rows];
+  copy.sort((left, right) => {
+    switch (sort) {
+      case "name_desc":
+        return right.full_name.localeCompare(left.full_name);
+      case "membership_asc":
+        return left.membership_id.localeCompare(right.membership_id);
+      case "membership_desc":
+        return right.membership_id.localeCompare(left.membership_id);
+      case "updated_desc":
+        return right.membership_id.localeCompare(left.membership_id);
+      case "name_asc":
+      default:
+        return left.full_name.localeCompare(right.full_name);
+    }
+  });
+  return copy;
 }
 
 function matchesMemberFilters(
@@ -65,26 +106,37 @@ export async function getMemberDirectoryData({
   filters: Array<"verified" | "pending" | "shared">;
   sort: string;
 }) {
-  const members = await listMembersWithVerification();
   const summary = await listVerificationSummary();
+  if (summary) {
+    const filteredSummary = sortSummary(summary.filter((row) => matchesSummaryFilters(row, query, filters)), sort);
+    const total = filteredSummary.length;
+    const start = (page - 1) * pageSize;
+    const pageRows = filteredSummary.slice(start, start + pageSize);
+    const pagedMembers = await getMembersByIdsWithVerification(pageRows.map((row) => row.profile_id));
+
+    return {
+      members: pagedMembers,
+      total,
+      counts: {
+        all: summary.filter((row) => matchesSummaryFilters(row, query, [])).length,
+        verified: summary.filter((row) => matchesSummaryFilters(row, query, ["verified"])).length,
+        pending: summary.filter((row) => matchesSummaryFilters(row, query, ["pending"])).length,
+        shared: summary.filter((row) => matchesSummaryFilters(row, query, ["shared"])).length,
+      },
+    };
+  }
+
+  const members = await listMembersWithVerification();
   const filtered = sortMembers(members.filter((member) => matchesMemberFilters(member, query, filters)), sort);
   const total = filtered.length;
   const start = (page - 1) * pageSize;
   const pagedMembers = filtered.slice(start, start + pageSize);
-
-  const counts = summary
-    ? {
-        all: summary.filter((row) => !query || [row.full_name, row.membership_id, row.current_mobile ?? "", row.email ?? ""].join(" ").toLowerCase().includes(query.trim().toLowerCase())).length,
-        verified: summary.filter((row) => (!query || [row.full_name, row.membership_id, row.current_mobile ?? "", row.email ?? ""].join(" ").toLowerCase().includes(query.trim().toLowerCase())) && row.completed).length,
-        pending: summary.filter((row) => (!query || [row.full_name, row.membership_id, row.current_mobile ?? "", row.email ?? ""].join(" ").toLowerCase().includes(query.trim().toLowerCase())) && !row.completed).length,
-        shared: summary.filter((row) => (!query || [row.full_name, row.membership_id, row.current_mobile ?? "", row.email ?? ""].join(" ").toLowerCase().includes(query.trim().toLowerCase())) && row.shared_mobile_count > 1).length,
-      }
-    : {
-        all: members.filter((member) => matchesMemberFilters(member, query, [])).length,
-        verified: members.filter((member) => matchesMemberFilters(member, query, ["verified"])).length,
-        pending: members.filter((member) => matchesMemberFilters(member, query, ["pending"])).length,
-        shared: members.filter((member) => matchesMemberFilters(member, query, ["shared"])).length,
-      };
+  const counts = {
+    all: members.filter((member) => matchesMemberFilters(member, query, [])).length,
+    verified: members.filter((member) => matchesMemberFilters(member, query, ["verified"])).length,
+    pending: members.filter((member) => matchesMemberFilters(member, query, ["pending"])).length,
+    shared: members.filter((member) => matchesMemberFilters(member, query, ["shared"])).length,
+  };
 
   return {
     members: pagedMembers,
@@ -153,23 +205,23 @@ export async function getSelfieQueueData({ page, pageSize }: { page: number; pag
 
 export async function getAdminOverviewSummary() {
   const summary = await listVerificationSummary();
-  if (!summary) {
-    const members = await listMembersWithVerification();
+  if (summary) {
+    const members = await getMembersByIdsWithVerification(summary.slice(0, 4).map((row) => row.profile_id));
     return {
-      totalMembers: members.length,
-      verified: members.filter((member) => member.verification.completed).length,
-      sharedMobileGroups: new Set(members.filter((member) => member.linkedMemberCount > 1).map((member) => member.currentMobile)).size,
-      needsAction: members.filter((member) => !member.verification.completed).length,
+      totalMembers: summary.length,
+      verified: summary.filter((row) => row.completed).length,
+      sharedMobileGroups: new Set(summary.filter((row) => row.shared_mobile_count > 1).map((row) => row.current_mobile ?? "")).size,
+      needsAction: summary.filter((row) => !row.completed).length,
       members,
     };
   }
 
   const members = await listMembersWithVerification();
   return {
-    totalMembers: summary.length,
-    verified: summary.filter((row) => row.completed).length,
-    sharedMobileGroups: new Set(summary.filter((row) => row.shared_mobile_count > 1).map((row) => row.current_mobile ?? "")).size,
-    needsAction: summary.filter((row) => !row.completed).length,
+    totalMembers: members.length,
+    verified: members.filter((member) => member.verification.completed).length,
+    sharedMobileGroups: new Set(members.filter((member) => member.linkedMemberCount > 1).map((member) => member.currentMobile)).size,
+    needsAction: members.filter((member) => !member.verification.completed).length,
     members,
   };
 }
