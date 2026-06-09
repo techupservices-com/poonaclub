@@ -82,6 +82,35 @@ create table if not exists audit_logs (
   created_at timestamptz not null default now()
 );
 
+create table if not exists member_verification_snapshot (
+  profile_id uuid primary key references profiles(id) on delete cascade,
+  membership_id text,
+  full_name text,
+  member_type text,
+  status text,
+  current_mobile text,
+  email text,
+  mobile_verified boolean not null default false,
+  email_verified boolean not null default false,
+  selfie_uploaded boolean not null default false,
+  profile_complete boolean not null default false,
+  shared_mobile_count integer not null default 0,
+  owner_profile_id uuid null references profiles(id),
+  is_mobile_login_owner boolean not null default false,
+  shared_mobile_pending boolean not null default false,
+  completed boolean not null default false,
+  photo_public_url text,
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists idx_mvs_membership_id on member_verification_snapshot (membership_id);
+create index if not exists idx_mvs_full_name on member_verification_snapshot (full_name);
+create index if not exists idx_mvs_current_mobile on member_verification_snapshot (current_mobile);
+create index if not exists idx_mvs_email on member_verification_snapshot (email);
+create index if not exists idx_mvs_completed on member_verification_snapshot (completed);
+create index if not exists idx_mvs_shared_mobile_pending on member_verification_snapshot (shared_mobile_pending);
+create index if not exists idx_mvs_updated_at on member_verification_snapshot (updated_at desc);
+
 create or replace view verification_status as
 select
   p.id as profile_id,

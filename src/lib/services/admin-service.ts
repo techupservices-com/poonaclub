@@ -1,8 +1,8 @@
 import { listAuditLogs } from "@/lib/services/audit-service";
 import { createSignedStorageUrl } from "@/lib/services/document-service";
-import { getMembersByIdsBasic, getMembersByIdsWithVerification, listMembersWithVerification } from "@/lib/services/member-service";
+import { getMembersByIdsBasic, listMembersWithVerification } from "@/lib/services/member-service";
 import type { MemberWithVerification } from "@/lib/types";
-import { fetchAllRows, getRequiredSupabaseClient, type MemberVerificationSummaryRow } from "@/lib/services/shared-db";
+import { fetchAllRows, getRequiredSupabaseClient, type MemberVerificationSnapshotRow, type MemberVerificationSummaryRow } from "@/lib/services/shared-db";
 import { SELFIE_BUCKET } from "@/lib/constants";
 
 type FilterKey = "verified" | "pending" | "shared";
@@ -19,14 +19,18 @@ function formatAuditTimestampToIST(value: string) {
 
 async function listVerificationSummary() {
   try {
-    return await fetchAllRows<MemberVerificationSummaryRow>("member_verification_summary", "*", "full_name");
+    return await fetchAllRows<MemberVerificationSnapshotRow>("member_verification_snapshot", "*", "full_name");
   } catch {
-    return null;
+    try {
+      return await fetchAllRows<MemberVerificationSummaryRow>("member_verification_summary", "*", "full_name");
+    } catch {
+      return null;
+    }
   }
 }
 
 function matchesSummaryFilters(
-  row: MemberVerificationSummaryRow,
+  row: MemberVerificationSummaryRow | MemberVerificationSnapshotRow,
   query: string,
   filters: Array<"verified" | "pending" | "shared">,
 ) {
@@ -46,21 +50,25 @@ function matchesSummaryFilters(
   return matchesQuery && matchesFilter;
 }
 
-function sortSummary(rows: MemberVerificationSummaryRow[], sort: string) {
+function sortSummary(rows: Array<MemberVerificationSummaryRow | MemberVerificationSnapshotRow>, sort: string) {
   const copy = [...rows];
   copy.sort((left, right) => {
+    const leftName = left.full_name ?? "";
+    const rightName = right.full_name ?? "";
+    const leftMembership = left.membership_id ?? "";
+    const rightMembership = right.membership_id ?? "";
     switch (sort) {
       case "name_desc":
-        return right.full_name.localeCompare(left.full_name);
+        return rightName.localeCompare(leftName);
       case "membership_asc":
-        return left.membership_id.localeCompare(right.membership_id);
+        return leftMembership.localeCompare(rightMembership);
       case "membership_desc":
-        return right.membership_id.localeCompare(left.membership_id);
+        return rightMembership.localeCompare(leftMembership);
       case "updated_desc":
-        return right.membership_id.localeCompare(left.membership_id);
+        return rightMembership.localeCompare(leftMembership);
       case "name_asc":
       default:
-        return left.full_name.localeCompare(right.full_name);
+        return leftName.localeCompare(rightName);
     }
   });
   return copy;
@@ -352,8 +360,8 @@ export async function getSelfieQueueData({ page, pageSize }: { page: number; pag
     return {
       items: pending.slice(start, start + pageSize).map((row) => ({
         id: row.profile_id,
-        fullName: row.full_name,
-        membershipId: row.membership_id,
+        fullName: row.full_name ?? "Unknown member",
+        membershipId: row.membership_id ?? row.profile_id,
         selfieUploaded: row.selfie_uploaded,
       })),
       total,
@@ -378,13 +386,11 @@ export async function getSelfieQueueData({ page, pageSize }: { page: number; pag
 export async function getAdminOverviewSummary() {
   const summary = await listVerificationSummary();
   if (summary) {
-    const members = await getMembersByIdsWithVerification(summary.slice(0, 4).map((row) => row.profile_id));
     return {
       totalMembers: summary.length,
       verified: summary.filter((row) => row.completed).length,
       sharedMobileGroups: new Set(summary.filter((row) => row.shared_mobile_count > 1).map((row) => row.current_mobile ?? "")).size,
       needsAction: summary.filter((row) => !row.completed).length,
-      members,
     };
   }
 
@@ -394,34 +400,51 @@ export async function getAdminOverviewSummary() {
     verified: members.filter((member) => member.verification.completed).length,
     sharedMobileGroups: new Set(members.filter((member) => member.linkedMemberCount > 1).map((member) => member.currentMobile)).size,
     needsAction: members.filter((member) => !member.verification.completed).length,
-    members,
   };
 }
 
 export async function getMemberPreviewData(limit: number) {
   const client = getRequiredSupabaseClient();
-  const idsRes = await client.from("profiles").select("id").order("updated_at", { ascending: false }).limit(limit);
-  if (idsRes.error) throw idsRes.error;
-  const ids = (idsRes.data ?? []).map((row) => row.id as string);
-  const sorted = await getMembersByIdsBasic(ids);
-  const withPhotos = await Promise.all(
-    sorted.slice(0, limit).map(async (member) => ({
-      ...member,
-      photoUrl:
-        member.photoUrl && !member.photoUrl.startsWith("http")
-          ? (await createSignedStorageUrl(SELFIE_BUCKET, member.photoUrl)) ?? undefined
-          : member.photoUrl,
-    })),
-  );
-  return {
-    members: withPhotos.map((member) => ({
-      id: member.id,
-      fullName: member.fullName,
-      membershipId: member.membershipId,
-      currentMobile: member.currentMobile,
-      photoUrl: member.photoUrl,
-    })),
-  };
+  try {
+    const { data, error } = await client
+      .from("member_verification_snapshot")
+      .select("profile_id,full_name,membership_id,current_mobile,photo_public_url,updated_at")
+      .order("updated_at", { ascending: false })
+      .limit(limit);
+    if (error) throw error;
+    return {
+      members: (data ?? []).map((row) => ({
+        id: row.profile_id as string,
+        fullName: row.full_name as string,
+        membershipId: row.membership_id as string,
+        currentMobile: (row.current_mobile as string | null) ?? "",
+        photoUrl: (row.photo_public_url as string | null) ?? undefined,
+      })),
+    };
+  } catch {
+    const idsRes = await client.from("profiles").select("id").order("updated_at", { ascending: false }).limit(limit);
+    if (idsRes.error) throw idsRes.error;
+    const ids = (idsRes.data ?? []).map((row) => row.id as string);
+    const sorted = await getMembersByIdsBasic(ids);
+    const withPhotos = await Promise.all(
+      sorted.slice(0, limit).map(async (member) => ({
+        ...member,
+        photoUrl:
+          member.photoUrl && !member.photoUrl.startsWith("http")
+            ? (await createSignedStorageUrl(SELFIE_BUCKET, member.photoUrl)) ?? undefined
+            : member.photoUrl,
+      })),
+    );
+    return {
+      members: withPhotos.map((member) => ({
+        id: member.id,
+        fullName: member.fullName,
+        membershipId: member.membershipId,
+        currentMobile: member.currentMobile,
+        photoUrl: member.photoUrl,
+      })),
+    };
+  }
 }
 
 export async function getAdminHomepageData() {

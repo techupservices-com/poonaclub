@@ -89,6 +89,27 @@ export interface MemberVerificationSummaryRow {
   completed: boolean;
 }
 
+export interface MemberVerificationSnapshotRow {
+  profile_id: string;
+  membership_id: string | null;
+  full_name: string | null;
+  member_type: string | null;
+  status: string | null;
+  current_mobile: string | null;
+  email: string | null;
+  mobile_verified: boolean;
+  email_verified: boolean;
+  selfie_uploaded: boolean;
+  profile_complete: boolean;
+  shared_mobile_count: number;
+  owner_profile_id: string | null;
+  is_mobile_login_owner: boolean;
+  shared_mobile_pending: boolean;
+  completed: boolean;
+  photo_public_url: string | null;
+  updated_at: string;
+}
+
 export function getRequiredSupabaseClient() {
   const client = createServerSupabaseClient();
   if (!client) {
