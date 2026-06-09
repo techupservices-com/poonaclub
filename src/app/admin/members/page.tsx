@@ -23,6 +23,7 @@ export default async function AdminMembersPage({
 
   return (
     <MemberDirectory
+      key={`${page}-${query}-${filters.join(",")}-${view}-${sort}`}
       members={data.members}
       counts={data.counts}
       total={data.total}
