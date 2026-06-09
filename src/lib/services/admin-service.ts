@@ -77,7 +77,7 @@ export async function getMemberDirectoryData({
   const pageQuery = applySummaryQueryFilters(
     client
       .from("member_verification_snapshot")
-      .select("profile_id,membership_id,full_name,member_type,email,current_mobile,photo_public_url,photo_thumbnail_url,profile_complete,mobile_verified,email_verified,selfie_uploaded,shared_mobile_count,completed", { count: "exact" })
+      .select("profile_id,membership_id,full_name,member_type,email,current_mobile,photo_public_url,profile_complete,mobile_verified,email_verified,selfie_uploaded,shared_mobile_count,completed", { count: "exact" })
       .order(sortConfig.column, { ascending: sortConfig.ascending })
       .range(start, start + pageSize - 1),
     query,
@@ -116,7 +116,7 @@ export async function getMemberDirectoryData({
     address1: "",
     address2: "",
     address3: "",
-    photoUrl: row.photo_thumbnail_url ?? row.photo_public_url ?? undefined,
+    photoUrl: row.photo_public_url ?? undefined,
     role: "member",
     linkedMemberCount: row.shared_mobile_count,
     verification: {
@@ -247,7 +247,7 @@ export async function getMemberPreviewData(limit: number) {
   try {
     const { data, error } = await client
       .from("member_verification_snapshot")
-      .select("profile_id,full_name,membership_id,current_mobile,photo_public_url,photo_thumbnail_url,updated_at")
+      .select("profile_id,full_name,membership_id,current_mobile,photo_public_url,updated_at")
       .order("updated_at", { ascending: false })
       .limit(limit);
     if (error) throw error;
@@ -257,7 +257,7 @@ export async function getMemberPreviewData(limit: number) {
         fullName: row.full_name as string,
         membershipId: row.membership_id as string,
         currentMobile: (row.current_mobile as string | null) ?? "",
-        photoUrl: ((row.photo_thumbnail_url as string | null) ?? (row.photo_public_url as string | null)) ?? undefined,
+        photoUrl: (row.photo_public_url as string | null) ?? undefined,
       })),
     };
   } catch {
