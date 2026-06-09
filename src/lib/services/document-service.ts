@@ -1,7 +1,12 @@
 import { DOCUMENT_BUCKET, SELFIE_BUCKET } from "@/lib/constants";
 import type { MemberDocument } from "@/lib/types";
+import sharp from "sharp";
 import { generateId } from "@/lib/utils";
 import { getRequiredSupabaseClient, mapDocument, type DocumentRow } from "@/lib/services/shared-db";
+
+function buildThumbnailPath(filePath: string) {
+  return filePath.replace("/selfie/selfie/", "/selfie/thumbnail/");
+}
 
 export async function resolveMemberPhotoUrl(
   client: ReturnType<typeof getRequiredSupabaseClient>,
@@ -64,7 +69,12 @@ export async function uploadMemberDocument(
   if (uploadError) throw uploadError;
 
   if (documentType === "selfie") {
-    await client.from("member_documents").delete().eq("profile_id", profileId).eq("document_type", documentType);
+    const existingDocs = await listDocuments(profileId);
+    const existing = existingDocs.find((document) => document.documentType === "selfie");
+    if (existing) {
+      await client.from("member_documents").delete().eq("id", existing.id);
+      await client.storage.from(bucket).remove([existing.filePath, buildThumbnailPath(existing.filePath)]);
+    }
   } else if (documentGroup && documentPart) {
     const existingDocs = await listDocuments(profileId);
     const existing = existingDocs.find(
@@ -94,6 +104,18 @@ export async function uploadMemberDocument(
 
   if (documentType === "selfie") {
     await client.from("profiles").update({ photo_url: filePath, updated_at: new Date().toISOString() }).eq("id", profileId);
+
+    const thumbnailPath = buildThumbnailPath(filePath);
+    const thumbnailBuffer = await sharp(Buffer.from(bytes))
+      .resize(256, 256, { fit: "cover" })
+      .jpeg({ quality: 80 })
+      .toBuffer();
+
+    const { error: thumbError } = await client.storage.from(bucket).upload(thumbnailPath, thumbnailBuffer, {
+      contentType: "image/jpeg",
+      upsert: true,
+    });
+    if (thumbError) throw thumbError;
   }
 
   return mapDocument(data as DocumentRow);
@@ -121,6 +143,7 @@ export async function removeMemberDocument(profileId: string, documentType: "sel
   if (documentType === "selfie") {
     const { error: profileError } = await client.from("profiles").update({ photo_url: null, updated_at: new Date().toISOString() }).eq("id", profileId);
     if (profileError) throw profileError;
+    await client.storage.from(bucket).remove([buildThumbnailPath(data.file_path)]);
   }
 
   return true;
@@ -148,6 +171,7 @@ export async function removeMemberDocumentById(profileId: string, documentId: st
   if (data.document_type === "selfie") {
     const { error: profileError } = await client.from("profiles").update({ photo_url: null, updated_at: new Date().toISOString() }).eq("id", profileId);
     if (profileError) throw profileError;
+    await client.storage.from(bucket).remove([buildThumbnailPath(data.file_path)]);
   }
 
   return true;

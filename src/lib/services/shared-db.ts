@@ -107,6 +107,7 @@ export interface MemberVerificationSnapshotRow {
   shared_mobile_pending: boolean;
   completed: boolean;
   photo_public_url: string | null;
+  photo_thumbnail_url: string | null;
   updated_at: string;
 }
 

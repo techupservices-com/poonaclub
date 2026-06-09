@@ -100,6 +100,7 @@ create table if not exists member_verification_snapshot (
   shared_mobile_pending boolean not null default false,
   completed boolean not null default false,
   photo_public_url text,
+  photo_thumbnail_url text,
   updated_at timestamptz not null default now()
 );
 

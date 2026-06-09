@@ -8,6 +8,11 @@ function buildPublicSelfieUrl(filePath: string | null) {
   return `${baseUrl}/storage/v1/object/public/member-selfies/${filePath}`;
 }
 
+function buildThumbnailPath(filePath: string | null) {
+  if (!filePath) return null;
+  return filePath.replace("/selfie/selfie/", "/selfie/thumbnail/");
+}
+
 function computeProfileComplete(profile: ProfileRow) {
   return Boolean(
     profile.membership_id &&
@@ -82,6 +87,7 @@ export async function buildVerificationSnapshotRow(profileId: string) {
     shared_mobile_pending: sharedMobilePending,
     completed,
     photo_public_url: buildPublicSelfieUrl(row.photo_url ?? (selfieRes.data?.file_path ?? null)),
+    photo_thumbnail_url: buildPublicSelfieUrl(buildThumbnailPath(row.photo_url ?? (selfieRes.data?.file_path ?? null))),
     updated_at: new Date().toISOString(),
   };
 }

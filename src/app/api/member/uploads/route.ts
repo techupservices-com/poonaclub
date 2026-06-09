@@ -1,5 +1,6 @@
 import { getMemberSession } from "@/lib/auth";
 import { addAuditLog, uploadMemberDocument } from "@/lib/data";
+import { upsertVerificationSnapshot } from "@/lib/services/summary-service";
 
 export async function POST(request: Request) {
   const session = await getMemberSession();
@@ -21,6 +22,7 @@ export async function POST(request: Request) {
       "selfie",
       "selfie",
     );
+    await upsertVerificationSnapshot(session.subject);
   }
   await addAuditLog({ actorType: "member", actorId: session.subject, action: "Uploaded verification files", targetProfileId: session.subject, metadata: { scope: "uploads" } });
   return Response.json({ message: "Selfie uploaded and linked to your member profile." });
