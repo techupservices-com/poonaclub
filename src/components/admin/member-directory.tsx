@@ -40,7 +40,7 @@ export function MemberDirectory({
   const [currentTotal, setCurrentTotal] = useState(total);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  const pageCount = Math.max(1, Math.ceil(currentTotal / pageSize));
 
   const refresh = useCallback(async () => {
     if (isRefreshing) return;
@@ -69,7 +69,7 @@ export function MemberDirectory({
     }
   }, [currentPage, currentCounts, currentTotal, filters, isRefreshing, query, sort, view]);
 
-  useVisiblePolling(30000, refresh);
+  useVisiblePolling(60000, refresh);
 
   function updateParams(next: {
     page?: number;
@@ -95,9 +95,9 @@ export function MemberDirectory({
   }
 
   const filterOptions = [
-    { value: "verified" as const, label: "Verified", count: counts.verified },
-    { value: "pending" as const, label: "Pending", count: counts.pending },
-    { value: "shared" as const, label: "Shared mobile", count: counts.shared },
+    { value: "verified" as const, label: "Verified", count: currentCounts.verified },
+    { value: "pending" as const, label: "Pending", count: currentCounts.pending },
+    { value: "shared" as const, label: "Shared mobile", count: currentCounts.shared },
   ];
 
   return (
@@ -114,8 +114,8 @@ export function MemberDirectory({
             )}
           >
             <span>All members</span>
-            <span className={cn("rounded-full px-2 py-0.5 text-xs font-semibold", filters.length === 0 ? "bg-white/18 text-white" : "bg-[#eef2fb] text-[#3c589e]")}>{counts.all}</span>
-          </button>
+              <span className={cn("rounded-full px-2 py-0.5 text-xs font-semibold", filters.length === 0 ? "bg-white/18 text-white" : "bg-[#eef2fb] text-[#3c589e]")}>{currentCounts.all}</span>
+            </button>
 
           {filterOptions.map((option) => (
             <button

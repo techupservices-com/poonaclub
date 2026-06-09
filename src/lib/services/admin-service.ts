@@ -1,7 +1,9 @@
 import { listAuditLogs } from "@/lib/services/audit-service";
+import { createSignedStorageUrl } from "@/lib/services/document-service";
 import { getMembersByIdsBasic, getMembersByIdsWithVerification, listMembersWithVerification } from "@/lib/services/member-service";
 import type { MemberWithVerification } from "@/lib/types";
 import { fetchAllRows, getRequiredSupabaseClient, type MemberVerificationSummaryRow } from "@/lib/services/shared-db";
+import { SELFIE_BUCKET } from "@/lib/constants";
 
 const IST_DATE_TIME_FORMATTER = new Intl.DateTimeFormat("en-IN", {
   dateStyle: "short",
@@ -122,7 +124,32 @@ export async function getMemberDirectoryData({
     const total = filteredSummary.length;
     const start = (page - 1) * pageSize;
     const pageRows = filteredSummary.slice(start, start + pageSize);
-    const pagedMembers = await getMembersByIdsWithVerification(pageRows.map((row) => row.profile_id));
+    const basicMembers = await getMembersByIdsBasic(pageRows.map((row) => row.profile_id));
+    const summaryMap = new Map(pageRows.map((row) => [row.profile_id, row]));
+
+    const pagedMembers: MemberWithVerification[] = await Promise.all(
+      basicMembers.map(async (member) => {
+        const summaryRow = summaryMap.get(member.id);
+        const signedPhoto =
+          member.photoUrl && !member.photoUrl.startsWith("http")
+            ? await createSignedStorageUrl(SELFIE_BUCKET, member.photoUrl)
+            : member.photoUrl ?? null;
+
+        return {
+          ...member,
+          photoUrl: signedPhoto ?? undefined,
+          linkedMemberCount: summaryRow?.shared_mobile_count ?? 0,
+          verification: {
+            profileConfirmed: summaryRow?.profile_complete ?? false,
+            mobileVerified: summaryRow?.mobile_verified ?? false,
+            emailVerified: summaryRow?.email_verified ?? false,
+            selfieUploaded: summaryRow?.selfie_uploaded ?? false,
+            documentUploaded: true,
+            completed: summaryRow?.completed ?? false,
+          },
+        };
+      }),
+    );
 
     return {
       members: pagedMembers,
@@ -270,9 +297,18 @@ export async function getMemberPreviewData(limit: number) {
   const idsRes = await client.from("profiles").select("id").order("updated_at", { ascending: false }).limit(limit);
   if (idsRes.error) throw idsRes.error;
   const ids = (idsRes.data ?? []).map((row) => row.id as string);
-  const sorted = await getMembersByIdsWithVerification(ids);
+  const sorted = await getMembersByIdsBasic(ids);
+  const withPhotos = await Promise.all(
+    sorted.slice(0, limit).map(async (member) => ({
+      ...member,
+      photoUrl:
+        member.photoUrl && !member.photoUrl.startsWith("http")
+          ? (await createSignedStorageUrl(SELFIE_BUCKET, member.photoUrl)) ?? undefined
+          : member.photoUrl,
+    })),
+  );
   return {
-    members: sorted.slice(0, limit).map((member) => ({
+    members: withPhotos.map((member) => ({
       id: member.id,
       fullName: member.fullName,
       membershipId: member.membershipId,
