@@ -29,7 +29,7 @@ export function AvatarBadge({
           src={photoUrl!}
           alt={`${name} profile`}
           fill
-          unoptimized
+          sizes="(max-width: 768px) 64px, 224px"
           className="object-cover"
           onError={() => setImageBroken(true)}
         />

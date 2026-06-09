@@ -1,9 +1,7 @@
 import { listAuditLogs } from "@/lib/services/audit-service";
-import { createSignedStorageUrl } from "@/lib/services/document-service";
-import { getMembersByIdsBasic, listMembersWithVerification } from "@/lib/services/member-service";
+import { getMembersByIdsBasic } from "@/lib/services/member-service";
 import type { MemberWithVerification } from "@/lib/types";
-import { fetchAllRows, getRequiredSupabaseClient, type MemberVerificationSnapshotRow, type MemberVerificationSummaryRow } from "@/lib/services/shared-db";
-import { SELFIE_BUCKET } from "@/lib/constants";
+import { fetchAllRows, getRequiredSupabaseClient, type MemberVerificationSnapshotRow } from "@/lib/services/shared-db";
 
 type FilterKey = "verified" | "pending" | "shared";
 
@@ -18,19 +16,11 @@ function formatAuditTimestampToIST(value: string) {
 }
 
 async function listVerificationSummary() {
-  try {
-    return await fetchAllRows<MemberVerificationSnapshotRow>("member_verification_snapshot", "*", "full_name");
-  } catch {
-    try {
-      return await fetchAllRows<MemberVerificationSummaryRow>("member_verification_summary", "*", "full_name");
-    } catch {
-      return null;
-    }
-  }
+  return fetchAllRows<MemberVerificationSnapshotRow>("member_verification_snapshot", "*", "full_name");
 }
 
 function matchesSummaryFilters(
-  row: MemberVerificationSummaryRow | MemberVerificationSnapshotRow,
+  row: MemberVerificationSnapshotRow,
   query: string,
   filters: Array<"verified" | "pending" | "shared">,
 ) {
@@ -50,7 +40,7 @@ function matchesSummaryFilters(
   return matchesQuery && matchesFilter;
 }
 
-function sortSummary(rows: Array<MemberVerificationSummaryRow | MemberVerificationSnapshotRow>, sort: string) {
+function sortSummary(rows: MemberVerificationSnapshotRow[], sort: string) {
   const copy = [...rows];
   copy.sort((left, right) => {
     const leftName = left.full_name ?? "";
@@ -65,7 +55,7 @@ function sortSummary(rows: Array<MemberVerificationSummaryRow | MemberVerificati
       case "membership_desc":
         return rightMembership.localeCompare(leftMembership);
       case "updated_desc":
-        return rightMembership.localeCompare(leftMembership);
+        return (Date.parse(right.updated_at) || 0) - (Date.parse(left.updated_at) || 0);
       case "name_asc":
       default:
         return leftName.localeCompare(rightName);
@@ -96,23 +86,7 @@ function matchesMemberFilters(
 }
 
 function sortMembers(members: MemberWithVerification[], sort: string) {
-  const copy = [...members];
-  copy.sort((left, right) => {
-    switch (sort) {
-      case "name_desc":
-        return right.fullName.localeCompare(left.fullName);
-      case "membership_asc":
-        return left.membershipId.localeCompare(right.membershipId);
-      case "membership_desc":
-        return right.membershipId.localeCompare(left.membershipId);
-      case "updated_desc":
-        return right.joinedAt.localeCompare(left.joinedAt);
-      case "name_asc":
-      default:
-        return left.fullName.localeCompare(right.fullName);
-    }
-  });
-  return copy;
+  return members;
 }
 
 function applySummaryQueryFilters<T>(queryBuilder: T, query: string, filters: FilterKey[]) {
@@ -164,135 +138,73 @@ export async function getMemberDirectoryData({
   sort: string;
 }) {
   const client = getRequiredSupabaseClient();
-  try {
-    const start = (page - 1) * pageSize;
-    const sortConfig = getSummarySortColumn(sort);
-
-    const pageQuery = applySummaryQueryFilters(
-      client
-        .from("member_verification_summary")
-        .select("*", { count: "exact" })
-        .order(sortConfig.column, { ascending: sortConfig.ascending })
-        .range(start, start + pageSize - 1),
-      query,
-      filters,
-    );
-
-    const [pageRes, allCountRes, verifiedCountRes, pendingCountRes, sharedCountRes] = await Promise.all([
-      pageQuery,
-      applySummaryQueryFilters(client.from("member_verification_summary").select("profile_id", { count: "exact", head: true }), query, []),
-      applySummaryQueryFilters(client.from("member_verification_summary").select("profile_id", { count: "exact", head: true }), query, ["verified"]),
-      applySummaryQueryFilters(client.from("member_verification_summary").select("profile_id", { count: "exact", head: true }), query, ["pending"]),
-      applySummaryQueryFilters(client.from("member_verification_summary").select("profile_id", { count: "exact", head: true }), query, ["shared"]),
-    ]);
-
-    if (pageRes.error) throw pageRes.error;
-    if (allCountRes.error) throw allCountRes.error;
-    if (verifiedCountRes.error) throw verifiedCountRes.error;
-    if (pendingCountRes.error) throw pendingCountRes.error;
-    if (sharedCountRes.error) throw sharedCountRes.error;
-
-    const pageRows = (pageRes.data ?? []) as MemberVerificationSummaryRow[];
-    const basicMembers = await getMembersByIdsBasic(pageRows.map((row) => row.profile_id));
-    const summaryMap = new Map(pageRows.map((row) => [row.profile_id, row]));
-
-    const pagedMembers: MemberWithVerification[] = await Promise.all(
-      basicMembers.map(async (member) => {
-        const summaryRow = summaryMap.get(member.id);
-        const signedPhoto =
-          member.photoUrl && !member.photoUrl.startsWith("http")
-            ? await createSignedStorageUrl(SELFIE_BUCKET, member.photoUrl)
-            : member.photoUrl ?? null;
-
-        return {
-          ...member,
-          photoUrl: signedPhoto ?? undefined,
-          linkedMemberCount: summaryRow?.shared_mobile_count ?? 0,
-          verification: {
-            profileConfirmed: summaryRow?.profile_complete ?? false,
-            mobileVerified: summaryRow?.mobile_verified ?? false,
-            emailVerified: summaryRow?.email_verified ?? false,
-            selfieUploaded: summaryRow?.selfie_uploaded ?? false,
-            documentUploaded: true,
-            completed: summaryRow?.completed ?? false,
-          },
-        };
-      }),
-    );
-
-    return {
-      members: pagedMembers,
-      total: pageRes.count ?? 0,
-      counts: {
-        all: allCountRes.count ?? 0,
-        verified: verifiedCountRes.count ?? 0,
-        pending: pendingCountRes.count ?? 0,
-        shared: sharedCountRes.count ?? 0,
-      },
-    };
-  } catch {
-    const summary = await listVerificationSummary();
-    if (summary) {
-      const filteredSummary = sortSummary(summary.filter((row) => matchesSummaryFilters(row, query, filters)), sort);
-      const total = filteredSummary.length;
-      const start = (page - 1) * pageSize;
-      const pageRows = filteredSummary.slice(start, start + pageSize);
-      const basicMembers = await getMembersByIdsBasic(pageRows.map((row) => row.profile_id));
-      const summaryMap = new Map(pageRows.map((row) => [row.profile_id, row]));
-
-      const pagedMembers: MemberWithVerification[] = await Promise.all(
-        basicMembers.map(async (member) => {
-          const summaryRow = summaryMap.get(member.id);
-          const signedPhoto =
-            member.photoUrl && !member.photoUrl.startsWith("http")
-              ? await createSignedStorageUrl(SELFIE_BUCKET, member.photoUrl)
-              : member.photoUrl ?? null;
-
-          return {
-            ...member,
-            photoUrl: signedPhoto ?? undefined,
-            linkedMemberCount: summaryRow?.shared_mobile_count ?? 0,
-            verification: {
-              profileConfirmed: summaryRow?.profile_complete ?? false,
-              mobileVerified: summaryRow?.mobile_verified ?? false,
-              emailVerified: summaryRow?.email_verified ?? false,
-              selfieUploaded: summaryRow?.selfie_uploaded ?? false,
-              documentUploaded: true,
-              completed: summaryRow?.completed ?? false,
-            },
-          };
-        }),
-      );
-
-      return {
-        members: pagedMembers,
-        total,
-        counts: {
-          all: summary.filter((row) => matchesSummaryFilters(row, query, [])).length,
-          verified: summary.filter((row) => matchesSummaryFilters(row, query, ["verified"])).length,
-          pending: summary.filter((row) => matchesSummaryFilters(row, query, ["pending"])).length,
-          shared: summary.filter((row) => matchesSummaryFilters(row, query, ["shared"])).length,
-        },
-      };
-    }
-  }
-
-  const members = await listMembersWithVerification();
-  const filtered = sortMembers(members.filter((member) => matchesMemberFilters(member, query, filters)), sort);
-  const total = filtered.length;
   const start = (page - 1) * pageSize;
-  const pagedMembers = filtered.slice(start, start + pageSize);
-  const counts = {
-    all: members.filter((member) => matchesMemberFilters(member, query, [])).length,
-    verified: members.filter((member) => matchesMemberFilters(member, query, ["verified"])).length,
-    pending: members.filter((member) => matchesMemberFilters(member, query, ["pending"])).length,
-    shared: members.filter((member) => matchesMemberFilters(member, query, ["shared"])).length,
-  };
+  const sortConfig = getSummarySortColumn(sort);
+
+  const pageQuery = applySummaryQueryFilters(
+    client
+      .from("member_verification_snapshot")
+      .select("profile_id,membership_id,full_name,member_type,email,current_mobile,photo_public_url,profile_complete,mobile_verified,email_verified,selfie_uploaded,shared_mobile_count,completed", { count: "exact" })
+      .order(sortConfig.column, { ascending: sortConfig.ascending })
+      .range(start, start + pageSize - 1),
+    query,
+    filters,
+  );
+
+  const [pageRes, allCountRes, verifiedCountRes, pendingCountRes, sharedCountRes] = await Promise.all([
+    pageQuery,
+    applySummaryQueryFilters(client.from("member_verification_snapshot").select("profile_id", { count: "exact", head: true }), query, []),
+    applySummaryQueryFilters(client.from("member_verification_snapshot").select("profile_id", { count: "exact", head: true }), query, ["verified"]),
+    applySummaryQueryFilters(client.from("member_verification_snapshot").select("profile_id", { count: "exact", head: true }), query, ["pending"]),
+    applySummaryQueryFilters(client.from("member_verification_snapshot").select("profile_id", { count: "exact", head: true }), query, ["shared"]),
+  ]);
+
+  if (pageRes.error) throw pageRes.error;
+  if (allCountRes.error) throw allCountRes.error;
+  if (verifiedCountRes.error) throw verifiedCountRes.error;
+  if (pendingCountRes.error) throw pendingCountRes.error;
+  if (sharedCountRes.error) throw sharedCountRes.error;
+
+  const pagedMembers: MemberWithVerification[] = ((pageRes.data ?? []) as MemberVerificationSnapshotRow[]).map((row) => ({
+    id: row.profile_id,
+    membershipId: row.membership_id ?? row.profile_id,
+    prefix: "",
+    fullName: row.full_name ?? "Unknown member",
+    memberType: row.member_type ?? "",
+    status: row.status ?? "",
+    email: row.email ?? "",
+    emailVerified: row.email_verified,
+    currentMobile: row.current_mobile ?? "",
+    mobileVerified: row.mobile_verified,
+    dateOfBirth: "1970-01-01",
+    joinedAt: row.updated_at,
+    city: "",
+    pincode: "",
+    address1: "",
+    address2: "",
+    address3: "",
+    photoUrl: row.photo_public_url ?? undefined,
+    role: "member",
+    linkedMemberCount: row.shared_mobile_count,
+    verification: {
+      profileConfirmed: row.profile_complete,
+      mobileVerified: row.mobile_verified,
+      emailVerified: row.email_verified,
+      selfieUploaded: row.selfie_uploaded,
+      documentUploaded: true,
+      completed: row.completed,
+    },
+  }));
 
   return {
     members: pagedMembers,
-    total,
-    counts,
+    total: pageRes.count ?? 0,
+    counts: {
+      all: allCountRes.count ?? 0,
+      verified: verifiedCountRes.count ?? 0,
+      pending: pendingCountRes.count ?? 0,
+      shared: sharedCountRes.count ?? 0,
+    },
   };
 }
 
@@ -352,54 +264,48 @@ export async function getRecentAuditPreviewData(limit: number) {
 }
 
 export async function getSelfieQueueData({ page, pageSize }: { page: number; pageSize: number }) {
-  const summary = await listVerificationSummary();
-  if (summary) {
-    const pending = summary.filter((row) => !row.selfie_uploaded);
-    const total = pending.length;
-    const start = (page - 1) * pageSize;
-    return {
-      items: pending.slice(start, start + pageSize).map((row) => ({
-        id: row.profile_id,
-        fullName: row.full_name ?? "Unknown member",
-        membershipId: row.membership_id ?? row.profile_id,
-        selfieUploaded: row.selfie_uploaded,
-      })),
-      total,
-    };
-  }
-
-  const members = await listMembersWithVerification();
-  const pending = members.filter((member) => !member.verification.selfieUploaded);
-  const total = pending.length;
+  const client = getRequiredSupabaseClient();
   const start = (page - 1) * pageSize;
+  const [pageRes, countRes] = await Promise.all([
+    client
+      .from("member_verification_snapshot")
+      .select("profile_id,full_name,membership_id,selfie_uploaded")
+      .eq("selfie_uploaded", false)
+      .order("full_name", { ascending: true })
+      .range(start, start + pageSize - 1),
+    client.from("member_verification_snapshot").select("profile_id", { count: "exact", head: true }).eq("selfie_uploaded", false),
+  ]);
+  if (pageRes.error) throw pageRes.error;
+  if (countRes.error) throw countRes.error;
   return {
-    items: pending.slice(start, start + pageSize).map((member) => ({
-      id: member.id,
-      fullName: member.fullName,
-      membershipId: member.membershipId,
-      selfieUploaded: member.verification.selfieUploaded,
+    items: ((pageRes.data ?? []) as MemberVerificationSnapshotRow[]).map((row) => ({
+      id: row.profile_id,
+      fullName: row.full_name ?? "Unknown member",
+      membershipId: row.membership_id ?? row.profile_id,
+      selfieUploaded: row.selfie_uploaded,
     })),
-    total,
+    total: countRes.count ?? 0,
   };
 }
 
 export async function getAdminOverviewSummary() {
-  const summary = await listVerificationSummary();
-  if (summary) {
-    return {
-      totalMembers: summary.length,
-      verified: summary.filter((row) => row.completed).length,
-      sharedMobileGroups: new Set(summary.filter((row) => row.shared_mobile_count > 1).map((row) => row.current_mobile ?? "")).size,
-      needsAction: summary.filter((row) => !row.completed).length,
-    };
-  }
+  const client = getRequiredSupabaseClient();
+  const [allRes, verifiedRes, pendingRes, sharedRowsRes] = await Promise.all([
+    client.from("member_verification_snapshot").select("profile_id", { count: "exact", head: true }),
+    client.from("member_verification_snapshot").select("profile_id", { count: "exact", head: true }).eq("completed", true),
+    client.from("member_verification_snapshot").select("profile_id", { count: "exact", head: true }).eq("completed", false),
+    client.from("member_verification_snapshot").select("current_mobile").gt("shared_mobile_count", 1),
+  ]);
+  if (allRes.error) throw allRes.error;
+  if (verifiedRes.error) throw verifiedRes.error;
+  if (pendingRes.error) throw pendingRes.error;
+  if (sharedRowsRes.error) throw sharedRowsRes.error;
 
-  const members = await listMembersWithVerification();
   return {
-    totalMembers: members.length,
-    verified: members.filter((member) => member.verification.completed).length,
-    sharedMobileGroups: new Set(members.filter((member) => member.linkedMemberCount > 1).map((member) => member.currentMobile)).size,
-    needsAction: members.filter((member) => !member.verification.completed).length,
+    totalMembers: allRes.count ?? 0,
+    verified: verifiedRes.count ?? 0,
+    sharedMobileGroups: new Set((sharedRowsRes.data ?? []).map((row) => row.current_mobile ?? "")).size,
+    needsAction: pendingRes.count ?? 0,
   };
 }
 
