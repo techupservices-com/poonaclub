@@ -10,7 +10,7 @@ import { useVisiblePolling } from "@/hooks/use-visible-polling";
 import type { MemberWithVerification } from "@/lib/types";
 import { cn, formatMobile } from "@/lib/utils";
 
-type FilterKey = "verified" | "pending" | "shared" | "inprogress";
+type FilterKey = "verified" | "shared" | "inprogress" | "notstarted";
 
 export function MemberDirectory({
   members,
@@ -24,7 +24,7 @@ export function MemberDirectory({
   sort,
 }: {
   members: MemberWithVerification[];
-  counts: { all: number; verified: number; inprogress: number; pending: number; shared: number };
+  counts: { all: number; verified: number; inprogress: number; notstarted: number; shared: number };
   total: number;
   currentPage: number;
   pageSize: number;
@@ -97,7 +97,7 @@ export function MemberDirectory({
   const filterOptions = [
     { value: "inprogress" as const, label: "In Progress", count: currentCounts.inprogress },
     { value: "verified" as const, label: "Verified", count: currentCounts.verified },
-    { value: "pending" as const, label: "Pending", count: currentCounts.pending },
+    { value: "notstarted" as const, label: "Not Started", count: currentCounts.notstarted },
     { value: "shared" as const, label: "Shared mobile", count: currentCounts.shared },
   ];
 

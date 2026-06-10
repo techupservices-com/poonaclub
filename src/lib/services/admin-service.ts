@@ -3,7 +3,7 @@ import { getMembersByIdsBasic } from "@/lib/services/member-service";
 import type { MemberWithVerification } from "@/lib/types";
 import { getRequiredSupabaseClient, type MemberVerificationSnapshotRow } from "@/lib/services/shared-db";
 
-type FilterKey = "verified" | "pending" | "shared" | "inprogress";
+type FilterKey = "verified" | "shared" | "inprogress" | "notstarted";
 
 const IST_DATE_TIME_FORMATTER = new Intl.DateTimeFormat("en-IN", {
   dateStyle: "short",
@@ -38,10 +38,15 @@ function applySummaryQueryFilters<T>(queryBuilder: T, query: string, filters: Fi
   }
 
   if (filters.includes("verified")) qb = qb.eq("completed", true) as typeof qb;
-  if (filters.includes("pending")) qb = qb.eq("completed", false) as typeof qb;
   if (filters.includes("inprogress")) {
     qb = qb.eq("completed", false) as typeof qb;
     qb = qb.or("mobile_verified.eq.true,email_verified.eq.true,selfie_uploaded.eq.true") as typeof qb;
+  }
+  if (filters.includes("notstarted")) {
+    qb = qb.eq("completed", false) as typeof qb;
+    qb = qb.eq("mobile_verified", false) as typeof qb;
+    qb = qb.eq("email_verified", false) as typeof qb;
+    qb = qb.eq("selfie_uploaded", false) as typeof qb;
   }
   if (filters.includes("shared")) qb = qb.gt("shared_mobile_count", 1) as typeof qb;
 
@@ -88,12 +93,12 @@ export async function getMemberDirectoryData({
     filters,
   );
 
-  const [pageRes, allCountRes, verifiedCountRes, inprogressCountRes, pendingCountRes, sharedCountRes] = await Promise.all([
+  const [pageRes, allCountRes, verifiedCountRes, inprogressCountRes, notStartedCountRes, sharedCountRes] = await Promise.all([
     pageQuery,
     applySummaryQueryFilters(client.from("member_verification_snapshot").select("profile_id", { count: "exact", head: true }), query, []),
     applySummaryQueryFilters(client.from("member_verification_snapshot").select("profile_id", { count: "exact", head: true }), query, ["verified"]),
     applySummaryQueryFilters(client.from("member_verification_snapshot").select("profile_id", { count: "exact", head: true }), query, ["inprogress"]),
-    applySummaryQueryFilters(client.from("member_verification_snapshot").select("profile_id", { count: "exact", head: true }), query, ["pending"]),
+    applySummaryQueryFilters(client.from("member_verification_snapshot").select("profile_id", { count: "exact", head: true }), query, ["notstarted"]),
     applySummaryQueryFilters(client.from("member_verification_snapshot").select("profile_id", { count: "exact", head: true }), query, ["shared"]),
   ]);
 
@@ -101,7 +106,7 @@ export async function getMemberDirectoryData({
   if (allCountRes.error) throw allCountRes.error;
   if (verifiedCountRes.error) throw verifiedCountRes.error;
   if (inprogressCountRes.error) throw inprogressCountRes.error;
-  if (pendingCountRes.error) throw pendingCountRes.error;
+  if (notStartedCountRes.error) throw notStartedCountRes.error;
   if (sharedCountRes.error) throw sharedCountRes.error;
 
   const pagedMembers: MemberWithVerification[] = ((pageRes.data ?? []) as MemberVerificationSnapshotRow[]).map((row) => ({
@@ -142,7 +147,7 @@ export async function getMemberDirectoryData({
       all: allCountRes.count ?? 0,
       verified: verifiedCountRes.count ?? 0,
       inprogress: inprogressCountRes.count ?? 0,
-      pending: pendingCountRes.count ?? 0,
+      notstarted: notStartedCountRes.count ?? 0,
       shared: sharedCountRes.count ?? 0,
     },
   };

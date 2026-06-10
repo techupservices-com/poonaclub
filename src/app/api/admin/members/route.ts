@@ -2,7 +2,7 @@ import { PAGE_SIZE } from "@/lib/constants";
 import { getMemberDirectoryData } from "@/lib/data";
 
 function parseFilters(value: string | null) {
-  return (value?.split(",").filter(Boolean) as Array<"verified" | "pending" | "shared">) ?? [];
+  return (value?.split(",").filter(Boolean) as Array<"verified" | "shared" | "inprogress" | "notstarted">) ?? [];
 }
 
 export async function GET(request: Request) {
