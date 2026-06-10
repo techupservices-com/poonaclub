@@ -95,6 +95,11 @@ export function MemberSelfieUploader({
     }
   }
 
+  const imageSizes =
+    variant === "panel"
+      ? "(max-width: 640px) 180px, (max-width: 1024px) 210px, 220px"
+      : "(max-width: 640px) 260px, (max-width: 1024px) 236px, 236px";
+
   return (
     <div className="flex flex-col gap-3">
       <div
@@ -110,7 +115,7 @@ export function MemberSelfieUploader({
         className={`group relative flex items-center justify-center overflow-hidden rounded-[28px] border border-[var(--border)] bg-[#eef2fb] shadow-sm ${variant === "panel" ? "aspect-[4/5] w-[180px] sm:w-[210px] md:w-[220px]" : "aspect-square w-full sm:aspect-[4/5] lg:max-h-[236px]"} ${uploadState === "uploading" ? "pointer-events-none opacity-90" : ""}`}
       >
         {previewUrl || photoUrl ? (
-          <Image src={previewUrl || photoUrl!} alt="Member selfie" fill unoptimized className="object-cover" />
+          <Image src={previewUrl || photoUrl!} alt="Member selfie" fill sizes={imageSizes} className="object-cover" />
         ) : (
           <div className="flex h-full w-full flex-col items-center justify-center gap-3 px-4 text-center text-[#3c589e]">
             <span className="flex h-14 w-14 items-center justify-center rounded-full bg-white shadow-sm sm:h-16 sm:w-16">
