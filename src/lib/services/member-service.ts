@@ -225,6 +225,44 @@ export async function getMemberByIdForAuth(profileId: string) {
   return getMemberByIdBasic(profileId);
 }
 
+export async function findVerifiedMobileOwnerFast(mobile: string, excludeProfileId?: string) {
+  const normalized = normalizeMobile(mobile);
+  if (!normalized) return null;
+  const client = getRequiredSupabaseClient();
+  let query = client
+    .from("profiles")
+    .select("*")
+    .eq("current_mobile", normalized)
+    .eq("mobile_verified", true)
+    .limit(1);
+  if (excludeProfileId) {
+    query = query.neq("id", excludeProfileId);
+  }
+  const { data, error } = await query.maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+  return mapProfile(data as ProfileRow);
+}
+
+export async function findVerifiedEmailOwnerFast(email: string, excludeProfileId?: string) {
+  const normalized = email.trim();
+  if (!normalized) return null;
+  const client = getRequiredSupabaseClient();
+  let query = client
+    .from("profiles")
+    .select("*")
+    .ilike("email", normalized)
+    .eq("email_verified", true)
+    .limit(1);
+  if (excludeProfileId) {
+    query = query.neq("id", excludeProfileId);
+  }
+  const { data, error } = await query.maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+  return mapProfile(data as ProfileRow);
+}
+
 export async function findVerifiedMobileOwner(mobile: string, excludeProfileId?: string) {
   const normalized = normalizeMobile(mobile);
   if (!normalized) return null;

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { getMemberSession } from "@/lib/auth";
-import { addAuditLog, completeMobileChangeRequest, findVerifiedMobileOwner, getMobileChangeRequest, reassignMobileLoginOwnerIfNeeded, setMobileLoginOwner } from "@/lib/data";
+import { addAuditLog, completeMobileChangeRequest, findVerifiedMobileOwnerFast, getMobileChangeRequest, reassignMobileLoginOwnerIfNeeded, setMobileLoginOwner, upsertVerificationSnapshot } from "@/lib/data";
 import { verifyOtp } from "@/lib/otp-store";
 
 export async function POST(request: Request) {
@@ -15,7 +15,7 @@ export async function POST(request: Request) {
   const result = await verifyOtp(session.subject, "mobile_change", body.otp, body.requestId);
   if (!result.ok) return Response.json({ error: result.reason }, { status: 400 });
 
-  const verifiedOwner = await findVerifiedMobileOwner(requestRecord.newMobile, requestRecord.profileId);
+  const verifiedOwner = await findVerifiedMobileOwnerFast(requestRecord.newMobile, requestRecord.profileId);
   if (verifiedOwner) {
     return Response.json(
       { error: "This mobile number is already linked to another verified member account. Please use another mobile number." },
@@ -28,6 +28,7 @@ export async function POST(request: Request) {
   if (requestRecord.oldMobile) {
     await reassignMobileLoginOwnerIfNeeded(requestRecord.oldMobile);
   }
+  await upsertVerificationSnapshot(requestRecord.profileId);
   await addAuditLog({ actorType: "member", actorId: session.subject, action: "Verified personal mobile change", targetProfileId: session.subject, metadata: { requestId: body.requestId } });
   return Response.json({ message: "New mobile number verified and activated." });
 }
