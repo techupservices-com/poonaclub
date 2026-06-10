@@ -10,7 +10,7 @@ import { useVisiblePolling } from "@/hooks/use-visible-polling";
 import type { MemberWithVerification } from "@/lib/types";
 import { cn, formatMobile } from "@/lib/utils";
 
-type FilterKey = "verified" | "pending" | "shared";
+type FilterKey = "verified" | "pending" | "shared" | "inprogress";
 
 export function MemberDirectory({
   members,
@@ -24,7 +24,7 @@ export function MemberDirectory({
   sort,
 }: {
   members: MemberWithVerification[];
-  counts: { all: number; verified: number; pending: number; shared: number };
+  counts: { all: number; verified: number; inprogress: number; pending: number; shared: number };
   total: number;
   currentPage: number;
   pageSize: number;
@@ -96,6 +96,7 @@ export function MemberDirectory({
 
   const filterOptions = [
     { value: "verified" as const, label: "Verified", count: currentCounts.verified },
+    { value: "inprogress" as const, label: "In Progress", count: currentCounts.inprogress },
     { value: "pending" as const, label: "Pending", count: currentCounts.pending },
     { value: "shared" as const, label: "Shared mobile", count: currentCounts.shared },
   ];
@@ -197,14 +198,18 @@ export function MemberDirectory({
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <h3 className="text-xl font-semibold text-[var(--foreground)]">{member.fullName}</h3>
-                      <p className="mt-1 text-sm text-[var(--muted)]">{member.membershipId} · {member.memberType}</p>
                     </div>
                     <StatusChip label={member.verification.completed ? "Verified" : "In progress"} tone={member.verification.completed ? "success" : "warning"} />
                   </div>
+                  <p className="mt-2 text-sm text-[var(--muted)]">{member.membershipId} · {member.memberType}</p>
                   <div className="mt-4 space-y-2 text-sm">
                     <p className="text-[var(--muted)]">{member.email}</p>
-                    <p className="leading-6 text-[var(--muted)]">{member.address1}, {member.address2}, {member.city} {member.pincode}</p>
                     <p className="font-medium text-[var(--foreground)]">{formatMobile(member.currentMobile)}</p>
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      <StatusChip label={member.verification.mobileVerified ? "Mobile verified" : "Mobile pending"} tone={member.verification.mobileVerified ? "success" : "warning"} />
+                      <StatusChip label={member.verification.emailVerified ? "Email verified" : "Email pending"} tone={member.verification.emailVerified ? "success" : "warning"} />
+                      <StatusChip label={member.verification.selfieUploaded ? "Selfie uploaded" : "Selfie pending"} tone={member.verification.selfieUploaded ? "success" : "warning"} />
+                    </div>
                   </div>
                   <div className="mt-5 flex gap-2">
                     <Link href={`/admin/members/${member.id}`} className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-medium text-[var(--foreground)] hover:border-[#6f84ba] hover:bg-[#eef2fb]">View</Link>
@@ -216,14 +221,18 @@ export function MemberDirectory({
               <div className="flex gap-4">
                 <AvatarBadge name={member.fullName} photoUrl={member.photoUrl} />
                 <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
                     <h3 className="text-lg font-semibold text-[var(--foreground)]">{member.fullName}</h3>
                     <StatusChip label={member.verification.completed ? "Verified" : "In progress"} tone={member.verification.completed ? "success" : "warning"} />
                   </div>
-                  <p className="mt-1 text-sm text-[var(--muted)]">{member.membershipId} · {member.memberType}</p>
+                  <p className="mt-2 text-sm text-[var(--muted)]">{member.membershipId} · {member.memberType}</p>
                   <p className="mt-3 text-sm text-[var(--muted)]">{member.email}</p>
-                  <p className="mt-2 text-sm leading-6 text-[var(--muted)]">{member.address1}, {member.address2}, {member.city} {member.pincode}</p>
                   <p className="mt-2 text-sm text-[var(--foreground)]">{formatMobile(member.currentMobile)}</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <StatusChip label={member.verification.mobileVerified ? "Mobile verified" : "Mobile pending"} tone={member.verification.mobileVerified ? "success" : "warning"} />
+                    <StatusChip label={member.verification.emailVerified ? "Email verified" : "Email pending"} tone={member.verification.emailVerified ? "success" : "warning"} />
+                    <StatusChip label={member.verification.selfieUploaded ? "Selfie uploaded" : "Selfie pending"} tone={member.verification.selfieUploaded ? "success" : "warning"} />
+                  </div>
                 </div>
               </div>
             )}
