@@ -149,17 +149,52 @@ export async function getMemberDirectoryData({
 }
 
 export async function getAuditHistoryData({ page, pageSize }: { page: number; pageSize: number }) {
+  return getAuditHistoryDataWithQuery({ page, pageSize, query: "" });
+}
+
+function matchesAuditSearch(
+  item: {
+    memberName: string;
+    membershipId: string;
+    mobile: string;
+    email?: string;
+  },
+  query: string,
+) {
+  const value = query.trim().toLowerCase();
+  if (!value) return true;
+
+  return [item.memberName, item.membershipId, item.mobile, item.email ?? ""]
+    .join(" ")
+    .toLowerCase()
+    .includes(value);
+}
+
+export async function getAuditHistoryDataWithQuery({
+  page,
+  pageSize,
+  query,
+}: {
+  page: number;
+  pageSize: number;
+  query: string;
+}) {
   const audits = await listAuditLogs();
-  const total = audits.length;
-  const start = (page - 1) * pageSize;
-  const pageAudits = audits.slice(start, start + pageSize);
-  const targetIds = [...new Set(pageAudits.map((entry) => entry.targetProfileId))];
+  const targetIds = [...new Set(audits.map((entry) => entry.targetProfileId))];
   const members = await getMembersByIdsBasic(targetIds);
   const memberMap = new Map(
-    members.map((member) => [member.id, { memberName: member.fullName, membershipId: member.membershipId, mobile: member.currentMobile }]),
+    members.map((member) => [
+      member.id,
+      {
+        memberName: member.fullName,
+        membershipId: member.membershipId,
+        mobile: member.currentMobile,
+        email: member.email,
+      },
+    ]),
   );
 
-  const items = pageAudits.map((entry) => {
+  const items = audits.map((entry) => {
     const target = memberMap.get(entry.targetProfileId);
     return {
       id: entry.id,
@@ -171,10 +206,15 @@ export async function getAuditHistoryData({ page, pageSize }: { page: number; pa
       memberName: target?.memberName ?? "Unknown member",
       membershipId: target?.membershipId ?? entry.targetProfileId,
       mobile: target?.mobile ?? "",
+      email: target?.email ?? "",
     };
   });
 
-  return { items, total };
+  const filtered = items.filter((item) => matchesAuditSearch(item, query));
+  const total = filtered.length;
+  const start = (page - 1) * pageSize;
+
+  return { items: filtered.slice(start, start + pageSize), total };
 }
 
 export async function getRecentAuditPreviewData(limit: number) {

@@ -23,17 +23,20 @@ export function AdminAuditHistory({
   total,
   currentPage,
   pageSize,
+  query,
 }: {
   items: AuditHistoryItem[];
   total: number;
   currentPage: number;
   pageSize: number;
+  query: string;
 }) {
   const router = useRouter();
   const [currentItems, setCurrentItems] = useState(items);
   const [currentTotal, setCurrentTotal] = useState(total);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState(query);
   const pageCount = Math.max(1, Math.ceil(currentTotal / pageSize));
 
   const refresh = useCallback(async () => {
@@ -41,7 +44,10 @@ export function AdminAuditHistory({
     setIsRefreshing(true);
     setError(null);
     try {
-      const response = await fetch(`/api/admin/audit?page=${currentPage}`, { cache: "no-store" });
+      const params = new URLSearchParams();
+      if (currentPage > 1) params.set("page", String(currentPage));
+      if (query) params.set("q", query);
+      const response = await fetch(`/api/admin/audit${params.toString() ? `?${params.toString()}` : ""}`, { cache: "no-store" });
       const payload = await response.json();
       if (!response.ok) {
         setError(payload.error ?? "Unable to refresh audit history.");
@@ -54,14 +60,26 @@ export function AdminAuditHistory({
     } finally {
       setIsRefreshing(false);
     }
-  }, [currentPage, currentTotal, isRefreshing]);
+  }, [currentPage, currentTotal, isRefreshing, query]);
 
   useVisiblePolling(60000, refresh);
 
   function goToPage(page: number) {
     const params = new URLSearchParams();
     if (page > 1) params.set("page", String(page));
+    if (query) params.set("q", query);
     router.push(`/admin/audit${params.toString() ? `?${params.toString()}` : ""}`);
+  }
+
+  function runSearch() {
+    const params = new URLSearchParams();
+    if (search.trim()) params.set("q", search.trim());
+    router.push(`/admin/audit${params.toString() ? `?${params.toString()}` : ""}`);
+  }
+
+  function clearSearch() {
+    setSearch("");
+    router.push("/admin/audit");
   }
 
   return (
@@ -80,9 +98,34 @@ export function AdminAuditHistory({
           {isRefreshing ? "Refreshing..." : "Refresh"}
         </button>
       </div>
+      <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-center">
+        <input
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") runSearch();
+          }}
+          placeholder="Search by member name, mobile number, email address"
+          className="w-full flex-1 rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-[var(--foreground)]"
+        />
+        <button
+          type="button"
+          onClick={runSearch}
+          className="h-12 rounded-2xl bg-[#3c589e] px-4 py-3 text-sm font-semibold text-white hover:bg-[#2f467e]"
+        >
+          Search
+        </button>
+        <button
+          type="button"
+          onClick={clearSearch}
+          className="h-12 rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm font-semibold text-[var(--foreground)] hover:border-[#6f84ba] hover:bg-[#eef2fb]"
+        >
+          Clear
+        </button>
+      </div>
       <div className="mt-6 grid gap-3">
         {currentTotal === 0 ? (
-          <p className="text-sm text-[var(--muted)]">No edits recorded yet. Changes from member or admin forms will appear here.</p>
+          <p className="text-sm text-[var(--muted)]">{query ? "No audit records match this search." : "No edits recorded yet. Changes from member or admin forms will appear here."}</p>
         ) : (
           currentItems.map((entry) => (
             <div key={entry.id} className="rounded-[22px] border border-[var(--border)] bg-white px-4 py-4">
