@@ -54,6 +54,7 @@ export function MemberDirectory({
   const [campaigns, setCampaigns] = useState<BroadcastEmailCampaign[]>([]);
   const [campaignError, setCampaignError] = useState<string | null>(null);
   const [isCampaignsLoading, setIsCampaignsLoading] = useState(false);
+  const [showRecentCampaigns, setShowRecentCampaigns] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectionMode, setSelectionMode] = useState<BroadcastEmailSelectionMode>("selected_visible");
   const [preview, setPreview] = useState<BroadcastEmailPreview | null>(null);
@@ -106,23 +107,30 @@ export function MemberDirectory({
       setCurrentCounts(payload.counts ?? currentCounts);
       setCurrentTotal(payload.total ?? currentTotal);
       setSelectedIds((prev) => prev.filter((id) => nextMembers.some((member: MemberWithVerification) => member.id === id)));
-      await loadCampaigns();
+      if (showRecentCampaigns) {
+        await loadCampaigns();
+      }
     } catch {
       setError("Unable to refresh members right now. Please try again.");
     } finally {
       setIsRefreshing(false);
     }
-  }, [currentPage, currentCounts, currentTotal, filters, isRefreshing, loadCampaigns, query, sort, view]);
+  }, [currentPage, currentCounts, currentTotal, filters, isRefreshing, loadCampaigns, query, showRecentCampaigns, sort, view]);
 
   useVisiblePolling(60000, refresh);
-  useVisiblePolling(60000, loadCampaigns);
+  useVisiblePolling(60000, async () => {
+    if (showRecentCampaigns) {
+      await loadCampaigns();
+    }
+  });
 
   useEffect(() => {
+    if (!showRecentCampaigns) return;
     const timer = window.setTimeout(() => {
       void loadCampaigns();
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [loadCampaigns]);
+  }, [loadCampaigns, showRecentCampaigns]);
 
   function updateParams(next: {
     page?: number;
@@ -332,43 +340,51 @@ export function MemberDirectory({
               <button disabled={currentTotal === 0} onClick={() => void openCampaignModal("all_filtered")} className="rounded-full border border-[#6f84ba] bg-[#eef2fb] px-4 py-2 text-sm font-semibold text-[#3c589e] hover:bg-[#dfe7f8] disabled:cursor-not-allowed disabled:opacity-50">
                 Email all filtered ({currentTotal})
               </button>
+              <button
+                onClick={() => setShowRecentCampaigns((current) => !current)}
+                className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-medium text-[var(--foreground)] hover:border-[#6f84ba] hover:bg-[#eef2fb]"
+              >
+                {showRecentCampaigns ? "Hide recent campaigns" : "Recent campaigns"}
+              </button>
             </div>
           </div>
         </div>
 
-        <div className="soft-card rounded-[24px] p-5">
-          <div className="mb-4 flex items-start justify-between gap-3">
-            <div>
-              <p className="font-mono text-xs uppercase tracking-[0.24em] text-[#3c589e]">Recent campaigns</p>
-              <h2 className="mt-2 text-xl font-semibold">Email send progress</h2>
+        {showRecentCampaigns ? (
+          <div className="soft-card rounded-[24px] p-5">
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div>
+                <p className="font-mono text-xs uppercase tracking-[0.24em] text-[#3c589e]">Recent campaigns</p>
+                <h2 className="mt-2 text-xl font-semibold">Email send progress</h2>
+              </div>
+              {isCampaignsLoading ? <p className="text-sm text-[var(--muted)]">Updating...</p> : null}
             </div>
-            {isCampaignsLoading ? <p className="text-sm text-[var(--muted)]">Updating...</p> : null}
-          </div>
-          {campaigns.length === 0 ? (
-            <p className="text-sm text-[var(--muted)]">No bulk email campaigns have been created yet.</p>
-          ) : (
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-              {campaigns.map((campaign) => (
-                <div key={campaign.id} className="rounded-[22px] border border-[var(--border)] bg-white p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold text-[var(--foreground)]">{campaign.subject}</p>
-                      <p className="mt-1 text-xs text-[var(--muted)]">{campaign.selectionMode === "all_filtered" ? "All filtered results" : "Selected visible members"}</p>
+            {campaigns.length === 0 ? (
+              <p className="text-sm text-[var(--muted)]">No bulk email campaigns have been created yet.</p>
+            ) : (
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                {campaigns.map((campaign) => (
+                  <div key={campaign.id} className="rounded-[22px] border border-[var(--border)] bg-white p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-[var(--foreground)]">{campaign.subject}</p>
+                        <p className="mt-1 text-xs text-[var(--muted)]">{campaign.selectionMode === "all_filtered" ? "All filtered results" : "Selected visible members"}</p>
+                      </div>
+                      <StatusChip label={campaign.status.replaceAll("_", " ")} tone={campaign.status === "completed" ? "success" : campaign.status === "completed_with_errors" || campaign.status === "failed" ? "danger" : "warning"} />
                     </div>
-                    <StatusChip label={campaign.status.replaceAll("_", " ")} tone={campaign.status === "completed" ? "success" : campaign.status === "completed_with_errors" || campaign.status === "failed" ? "danger" : "warning"} />
+                    <div className="mt-4 space-y-2 text-sm text-[var(--muted)]">
+                      <p>Valid recipients: <span className="font-semibold text-[var(--foreground)]">{campaign.totalValid}</span></p>
+                      <p>Skipped: <span className="font-semibold text-[var(--foreground)]">{campaign.totalSkipped}</span></p>
+                      <p>Batches: <span className="font-semibold text-[var(--foreground)]">{campaign.batchesCompleted}/{campaign.totalBatches}</span></p>
+                      <p>Accepted by Resend: <span className="font-semibold text-[var(--foreground)]">{campaign.sentToProviderCount}</span></p>
+                    </div>
                   </div>
-                  <div className="mt-4 space-y-2 text-sm text-[var(--muted)]">
-                    <p>Valid recipients: <span className="font-semibold text-[var(--foreground)]">{campaign.totalValid}</span></p>
-                    <p>Skipped: <span className="font-semibold text-[var(--foreground)]">{campaign.totalSkipped}</span></p>
-                    <p>Batches: <span className="font-semibold text-[var(--foreground)]">{campaign.batchesCompleted}/{campaign.totalBatches}</span></p>
-                    <p>Accepted by Resend: <span className="font-semibold text-[var(--foreground)]">{campaign.sentToProviderCount}</span></p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-          {campaignError ? <p className="mt-3 text-sm font-semibold text-red-600">{campaignError}</p> : null}
-        </div>
+                ))}
+              </div>
+            )}
+            {campaignError ? <p className="mt-3 text-sm font-semibold text-red-600">{campaignError}</p> : null}
+          </div>
+        ) : null}
 
         <div className="flex justify-end">
           <div className="grid w-full grid-cols-2 gap-3 md:w-[260px]">
