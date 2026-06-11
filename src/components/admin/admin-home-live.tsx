@@ -29,9 +29,9 @@ interface RecentAuditItem {
 interface AdminHomepageData {
   counts: {
     totalMembers: number;
+    inprogress: number;
     verified: number;
-    sharedMobileGroups: number;
-    needsAction: number;
+    notstarted: number;
   };
   members: PreviewMember[];
   recentAuditItems: RecentAuditItem[];
@@ -64,10 +64,10 @@ export function AdminHomeLive({ initialData }: { initialData: AdminHomepageData 
   useVisiblePolling(60000, refresh);
 
   const summaryCards = [
-    { label: "Total members", value: data.counts.totalMembers, href: "/admin/members" },
+    { label: "Total Members", value: data.counts.totalMembers, href: "/admin/members" },
+    { label: "In Progress", value: data.counts.inprogress, href: "/admin/members?filters=inprogress" },
     { label: "Verified", value: data.counts.verified, href: "/admin/members?filters=verified" },
-    { label: "Shared mobile groups", value: data.counts.sharedMobileGroups, href: "/admin/members?filters=shared" },
-    { label: "Needs action", value: data.counts.needsAction, href: "/admin/members?filters=pending" },
+    { label: "Not Started", value: data.counts.notstarted, href: "/admin/members?filters=notstarted" },
   ];
 
   return (

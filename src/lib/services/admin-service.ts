@@ -275,22 +275,32 @@ export async function getSelfieQueueData({ page, pageSize }: { page: number; pag
 
 export async function getAdminOverviewSummary() {
   const client = getRequiredSupabaseClient();
-  const [allRes, verifiedRes, pendingRes, sharedRowsRes] = await Promise.all([
+  const [allRes, verifiedRes, inprogressRes, notStartedRes] = await Promise.all([
     client.from("member_verification_snapshot").select("profile_id", { count: "exact", head: true }),
     client.from("member_verification_snapshot").select("profile_id", { count: "exact", head: true }).eq("completed", true),
-    client.from("member_verification_snapshot").select("profile_id", { count: "exact", head: true }).eq("completed", false),
-    client.from("member_verification_snapshot").select("current_mobile").gt("shared_mobile_count", 1),
+    client
+      .from("member_verification_snapshot")
+      .select("profile_id", { count: "exact", head: true })
+      .eq("completed", false)
+      .or("mobile_verified.eq.true,email_verified.eq.true,selfie_uploaded.eq.true"),
+    client
+      .from("member_verification_snapshot")
+      .select("profile_id", { count: "exact", head: true })
+      .eq("completed", false)
+      .eq("mobile_verified", false)
+      .eq("email_verified", false)
+      .eq("selfie_uploaded", false),
   ]);
   if (allRes.error) throw allRes.error;
   if (verifiedRes.error) throw verifiedRes.error;
-  if (pendingRes.error) throw pendingRes.error;
-  if (sharedRowsRes.error) throw sharedRowsRes.error;
+  if (inprogressRes.error) throw inprogressRes.error;
+  if (notStartedRes.error) throw notStartedRes.error;
 
   return {
     totalMembers: allRes.count ?? 0,
+    inprogress: inprogressRes.count ?? 0,
     verified: verifiedRes.count ?? 0,
-    sharedMobileGroups: new Set((sharedRowsRes.data ?? []).map((row) => row.current_mobile ?? "")).size,
-    needsAction: pendingRes.count ?? 0,
+    notstarted: notStartedRes.count ?? 0,
   };
 }
 
@@ -343,9 +353,9 @@ export async function getAdminHomepageData() {
   return {
     counts: {
       totalMembers: overview.totalMembers,
+      inprogress: overview.inprogress,
       verified: overview.verified,
-      sharedMobileGroups: overview.sharedMobileGroups,
-      needsAction: overview.needsAction,
+      notstarted: overview.notstarted,
     },
     members: memberPreview.members,
     recentAuditItems: recentAudit.items,
