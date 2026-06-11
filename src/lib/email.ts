@@ -26,8 +26,8 @@ export async function sendEmailOtp(input: SendEmailOtpInput) {
     from: `${fromName} <${fromEmail}>`,
     to: [input.email],
     subject: "Your Poona Club verification code",
-    text: `Hello ${input.memberName}, your Poona Club verification code is ${input.otp}. It is valid for 10 minutes.`,
-    html: `<p>Hello ${input.memberName},</p><p>Your <strong>Poona Club</strong> verification code is <strong>${input.otp}</strong>.</p><p>It is valid for 10 minutes.</p>`,
+    text: `Hello ${input.memberName}, your Poona Club verification code is ${input.otp}.`,
+    html: `<p>Hello ${input.memberName},</p><p>Your <strong>Poona Club</strong> verification code is <strong>${input.otp}</strong>.</p>`,
   };
 
   let raw = "";
