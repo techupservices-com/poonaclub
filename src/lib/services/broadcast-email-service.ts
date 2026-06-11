@@ -18,6 +18,15 @@ import {
 
 const BROADCAST_TEMPLATE_KEY = "verification_reminder";
 const BATCH_SIZE = 100;
+const STATUS_PRECEDENCE: Record<BroadcastEmailRecipient["status"], number> = {
+  pending: 0,
+  sent_to_provider: 1,
+  delivered: 2,
+  bounced: 3,
+  complained: 3,
+  failed: 3,
+  skipped: 3,
+};
 
 interface RecipientCandidate {
   profileId: string;
@@ -58,6 +67,15 @@ function applySummaryQueryFilters<T>(queryBuilder: T, query: string, filters: Me
 
 function normalizeEmail(value: string) {
   return value.trim().toLowerCase();
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 function isValidEmail(value: string) {
@@ -136,9 +154,25 @@ export function getVerificationReminderTemplate() {
     key: BROADCAST_TEMPLATE_KEY,
     subject: "Complete your Poona Club verification",
     renderHtml: (fullName: string) =>
-      `<p>Hi ${fullName},</p><p>This is a reminder to complete your Poona Club verification on <a href="https://www.pclprofile.com">pclprofile.com</a>.</p><p>Please log in with your registered email address or mobile number and finish the pending steps at the earliest.</p><p>Thank you,<br />Poona Club</p>`,
+      `<p>Hi ${escapeHtml(fullName)},</p><p>This is a reminder to complete your Poona Club verification on <a href="https://www.pclprofile.com">pclprofile.com</a>.</p><p>Please log in with your registered email address or mobile number and finish the pending steps at the earliest.</p><p>Thank you,<br />Poona Club</p>`,
     renderText: (fullName: string) =>
       `Hi ${fullName},\n\nThis is a reminder to complete your Poona Club verification on https://www.pclprofile.com. Please log in with your registered email address or mobile number and finish the pending steps at the earliest.\n\nThank you,\nPoona Club`,
+  };
+}
+
+export function getBroadcastTemplateByKey(templateKey: string) {
+  if (templateKey === BROADCAST_TEMPLATE_KEY) {
+    return getVerificationReminderTemplate();
+  }
+  throw new Error(`Unsupported broadcast template: ${templateKey}`);
+}
+
+export function renderBroadcastTemplate(templateKey: string, fullName: string) {
+  const template = getBroadcastTemplateByKey(templateKey);
+  return {
+    subject: template.subject,
+    html: template.renderHtml(fullName),
+    text: template.renderText(fullName),
   };
 }
 
@@ -355,21 +389,33 @@ export async function createBroadcastEmailCampaign(input: {
     completed_at: validRecipients.length ? null : now,
   };
 
-  const { error: campaignError } = await client.from("broadcast_emails").insert(campaignRow);
-  if (campaignError) throw campaignError;
+  try {
+    const { error: campaignError } = await client.from("broadcast_emails").insert(campaignRow);
+    if (campaignError) throw campaignError;
 
-  if (batchRows.length) {
-    const { error: batchError } = await client.from("broadcast_email_batches").insert(batchRows);
-    if (batchError) throw batchError;
-  }
+    if (batchRows.length) {
+      const { error: batchError } = await client.from("broadcast_email_batches").insert(batchRows);
+      if (batchError) throw batchError;
+    }
 
-  for (let index = 0; index < recipientRows.length; index += 1000) {
-    const chunk = recipientRows.slice(index, index + 1000);
-    const { error } = await client.from("broadcast_email_recipients").insert(chunk);
-    if (error) throw error;
+    for (let index = 0; index < recipientRows.length; index += 1000) {
+      const chunk = recipientRows.slice(index, index + 1000);
+      const { error } = await client.from("broadcast_email_recipients").insert(chunk);
+      if (error) throw error;
+    }
+  } catch (error) {
+    await client.from("broadcast_emails").delete().eq("id", campaignId);
+    throw error;
   }
 
   return getBroadcastEmailCampaign(campaignId);
+}
+
+export async function getBroadcastEmailCampaignRow(id: string) {
+  const client = getRequiredSupabaseClient();
+  const { data, error } = await client.from("broadcast_emails").select("*").eq("id", id).maybeSingle();
+  if (error) throw error;
+  return (data as BroadcastEmailRow | null) ?? null;
 }
 
 export async function listBroadcastEmailCampaigns(limit = 5) {
@@ -448,6 +494,7 @@ export async function refreshBroadcastEmailCampaignSummary(campaignId: string) {
     failed_count: failedCount,
     completed_at: completedAt,
     started_at: (campaignRes.data as BroadcastEmailRow).started_at ?? now,
+    last_error: failedCount || activeBatchCount > 0 ? (campaignRes.data as BroadcastEmailRow).last_error : null,
   };
 
   const { error } = await client.from("broadcast_emails").update(updates).eq("id", campaignId);
@@ -469,10 +516,23 @@ export async function updateBroadcastEmailRecipientEvent(providerMessageId: stri
   const nextStatus = statusMap[eventType];
   if (!nextStatus) return null;
 
+  const { data: recipientData, error: fetchError } = await client
+    .from("broadcast_email_recipients")
+    .select("id,broadcast_email_id,status")
+    .eq("provider_message_id", providerMessageId)
+    .maybeSingle();
+  if (fetchError) throw fetchError;
+  if (!recipientData) return null;
+
+  const currentStatus = recipientData.status as BroadcastEmailRecipient["status"];
+  if (STATUS_PRECEDENCE[nextStatus] < STATUS_PRECEDENCE[currentStatus]) {
+    return recipientData.broadcast_email_id as string;
+  }
+
   const { data, error } = await client
     .from("broadcast_email_recipients")
     .update({ status: nextStatus, provider_last_event: eventType, updated_at: new Date().toISOString() })
-    .eq("provider_message_id", providerMessageId)
+    .eq("id", recipientData.id as string)
     .select("broadcast_email_id")
     .maybeSingle();
   if (error) throw error;

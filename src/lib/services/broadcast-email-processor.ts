@@ -1,6 +1,6 @@
 import type { BroadcastEmailBatchRow } from "@/lib/services/shared-db";
 import { getRequiredSupabaseClient } from "@/lib/services/shared-db";
-import { listBroadcastEmailRecipientsForBatch, refreshBroadcastEmailCampaignSummary } from "@/lib/services/broadcast-email-service";
+import { getBroadcastEmailCampaignRow, listBroadcastEmailRecipientsForBatch, refreshBroadcastEmailCampaignSummary } from "@/lib/services/broadcast-email-service";
 import { sendBroadcastRecipientBatch } from "@/lib/services/resend-batch-service";
 
 const PROCESS_CONCURRENCY = 3;
@@ -12,7 +12,7 @@ function addMinutes(date: Date, minutes: number) {
 }
 
 export function getBroadcastProcessToken() {
-  return process.env.SESSION_SECRET ?? "poona-club-dev-session-secret";
+  return process.env.BROADCAST_PROCESS_SECRET ?? process.env.SESSION_SECRET ?? "poona-club-dev-session-secret";
 }
 
 export async function triggerBroadcastProcessing(origin: string, campaignId: string) {
@@ -94,6 +94,10 @@ async function claimNextBatches(campaignId: string) {
 
 async function processSingleBatch(campaignId: string, batch: BroadcastEmailBatchRow) {
   const client = getRequiredSupabaseClient();
+  const campaign = await getBroadcastEmailCampaignRow(campaignId);
+  if (!campaign) {
+    throw new Error("Broadcast email campaign not found.");
+  }
   const recipients = await listBroadcastEmailRecipientsForBatch(batch.id);
   if (!recipients.length) {
     await client
@@ -111,7 +115,8 @@ async function processSingleBatch(campaignId: string, batch: BroadcastEmailBatch
   }
 
   const sendResult = await sendBroadcastRecipientBatch({
-    subject: "Complete your Poona Club verification",
+    templateKey: campaign.template_key,
+    subject: campaign.subject,
     recipients,
     idempotencyKey: `${batch.idempotency_key}:${batch.attempt_count + 1}`,
   });
@@ -145,9 +150,9 @@ async function processSingleBatch(campaignId: string, batch: BroadcastEmailBatch
         processed_count: recipientUpdates.length,
         success_count: successCount,
         failure_count: failureCount,
-        completed_at: now,
-        claim_expires_at: null,
-        last_error: failureCount ? "Some recipients were not accepted by Resend." : null,
+      completed_at: now,
+      claim_expires_at: null,
+      last_error: failureCount ? "Some recipients were not accepted by Resend." : null,
       })
       .eq("id", batch.id);
     if (batchError) throw batchError;

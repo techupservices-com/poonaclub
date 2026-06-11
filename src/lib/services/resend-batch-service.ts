@@ -1,4 +1,5 @@
 import { getDefaultResendFromAddress, sendResendBatchEmails } from "@/lib/email";
+import { renderBroadcastTemplate } from "@/lib/services/broadcast-email-service";
 import type { BroadcastEmailRecipient } from "@/lib/types";
 
 export interface BatchSendResult {
@@ -15,28 +16,33 @@ function isRetryableError(error: unknown) {
 }
 
 export async function sendBroadcastRecipientBatch({
+  templateKey,
   subject,
   recipients,
   idempotencyKey,
 }: {
+  templateKey: string;
   subject: string;
   recipients: BroadcastEmailRecipient[];
   idempotencyKey: string;
 }): Promise<BatchSendResult> {
   try {
     const response = await sendResendBatchEmails(
-      recipients.map((recipient) => ({
-        from: getDefaultResendFromAddress(),
-        to: [recipient.email],
-        subject,
-        html: `<p>Hi ${recipient.fullName},</p><p>This is a reminder to complete your Poona Club verification on <a href="https://www.pclprofile.com">pclprofile.com</a>.</p><p>Please log in with your registered email address or mobile number and finish the pending steps at the earliest.</p><p>Thank you,<br />Poona Club</p>`,
-        text: `Hi ${recipient.fullName},\n\nThis is a reminder to complete your Poona Club verification on https://www.pclprofile.com. Please log in with your registered email address or mobile number and finish the pending steps at the earliest.\n\nThank you,\nPoona Club`,
-        tags: [
-          { name: "recipient_id", value: recipient.id },
-          { name: "broadcast_id", value: recipient.broadcastEmailId },
-          { name: "batch_id", value: recipient.batchId ?? "unassigned" },
-        ],
-      })),
+      recipients.map((recipient) => {
+        const rendered = renderBroadcastTemplate(templateKey, recipient.fullName);
+        return {
+          from: getDefaultResendFromAddress(),
+          to: [recipient.email],
+          subject: subject || rendered.subject,
+          html: rendered.html,
+          text: rendered.text,
+          tags: [
+            { name: "recipient_id", value: recipient.id },
+            { name: "broadcast_id", value: recipient.broadcastEmailId },
+            { name: "batch_id", value: recipient.batchId ?? "unassigned" },
+          ],
+        };
+      }),
       idempotencyKey,
     );
 
