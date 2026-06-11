@@ -120,9 +120,17 @@ async function processSingleBatch(campaignId: string, batch: BroadcastEmailBatch
   if (sendResult.ok) {
     const recipientUpdates = recipients.map((recipient, index) => ({
       id: recipient.id,
+      broadcast_email_id: recipient.broadcastEmailId,
+      batch_id: recipient.batchId ?? null,
+      profile_id: recipient.profileId ?? null,
+      email: recipient.email,
+      full_name: recipient.fullName,
       status: sendResult.messageIds[index] ? "sent_to_provider" : "failed",
       provider_message_id: sendResult.messageIds[index],
+      provider_last_event: sendResult.messageIds[index] ? "email.sent" : null,
+      skip_reason: recipient.skipReason ?? null,
       error_message: sendResult.messageIds[index] ? null : "Resend did not return a message id.",
+      created_at: recipient.createdAt,
       updated_at: now,
     }));
     const { error: recipientError } = await client.from("broadcast_email_recipients").upsert(recipientUpdates);
@@ -164,7 +172,14 @@ async function processSingleBatch(campaignId: string, batch: BroadcastEmailBatch
   if (terminal) {
     const recipientUpdates = recipients.map((recipient) => ({
       id: recipient.id,
+      broadcast_email_id: recipient.broadcastEmailId,
+      batch_id: recipient.batchId ?? null,
+      profile_id: recipient.profileId ?? null,
+      email: recipient.email,
+      full_name: recipient.fullName,
       status: "failed",
+      skip_reason: recipient.skipReason ?? null,
+      created_at: recipient.createdAt,
       error_message: sendResult.errorMessage ?? "Batch send failed.",
       updated_at: now,
     }));
