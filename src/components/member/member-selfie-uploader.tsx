@@ -20,23 +20,19 @@ export function MemberSelfieUploader({
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [uploadState, setUploadState] = useState<"idle" | "uploading" | "uploaded">("idle");
+  const [uploadState, setUploadState] = useState<"idle" | "uploading">("idle");
   const [message, setMessage] = useState<string | null>(null);
   const previousPhotoUrl = useRef<string | null>(photoUrl);
 
   useEffect(() => {
-    if (uploadState === "uploaded" && photoUrl && photoUrl !== previousPhotoUrl.current) {
-      const timer = window.setTimeout(() => {
-        setPreviewUrl((current) => {
-          if (current) URL.revokeObjectURL(current);
-          return null;
-        });
-        setUploadState("idle");
-        setMessage(null);
-      }, 1200);
-
+    if (uploadState === "uploading" && photoUrl && photoUrl !== previousPhotoUrl.current) {
+      setPreviewUrl((current) => {
+        if (current) URL.revokeObjectURL(current);
+        return null;
+      });
+      setUploadState("idle");
+      setMessage(null);
       previousPhotoUrl.current = photoUrl;
-      return () => window.clearTimeout(timer);
     }
 
     previousPhotoUrl.current = photoUrl;
@@ -80,8 +76,6 @@ export function MemberSelfieUploader({
       formData.append("selfie", prepared);
       const response = await fetch("/api/member/uploads", { method: "POST", body: formData });
       if (response.ok) {
-        setMessage("Selfie uploaded and linked to your member profile.");
-        setUploadState("uploaded");
         router.refresh();
       } else {
         setUploadState("idle");
@@ -127,9 +121,7 @@ export function MemberSelfieUploader({
         <span className="absolute inset-x-2 bottom-2 rounded-full bg-white/92 px-3 py-2 text-center text-[11px] font-semibold text-[#24345f] shadow-sm transition group-hover:bg-white sm:inset-x-3 sm:bottom-3 sm:text-xs">
           {uploadState === "uploading"
             ? "Uploading..."
-            : uploadState === "uploaded"
-              ? "Uploaded"
-              : hasSelfie || photoUrl
+            : hasSelfie || photoUrl
                 ? "Replace photo"
                 : "Upload selfie"}
         </span>
@@ -147,7 +139,7 @@ export function MemberSelfieUploader({
         }}
       />
       {uploadState === "uploading" ? <p className="text-sm font-semibold text-[var(--muted)]">Uploading...</p> : null}
-      {message ? <p className={`text-sm font-semibold ${uploadState === "uploaded" ? "text-[var(--muted)]" : "text-red-600"}`}>{message}</p> : null}
+      {message ? <p className="text-sm font-semibold text-red-600">{message}</p> : null}
     </div>
   );
 }
