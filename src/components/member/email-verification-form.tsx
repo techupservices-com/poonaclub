@@ -1,17 +1,58 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { MemberCurrentValueConfirmCard } from "@/components/member/member-current-value-confirm-card";
 
-export function EmailVerificationForm({ initialEmail = "", verified = false }: { initialEmail?: string; verified?: boolean }) {
+export function EmailVerificationForm({
+  initialEmail = "",
+  verified = false,
+  loginIdentifierType,
+}: {
+  initialEmail?: string;
+  verified?: boolean;
+  loginIdentifierType?: "mobile" | "email";
+}) {
   const router = useRouter();
-  const [email, setEmail] = useState(verified ? "" : initialEmail);
+  const [email, setEmail] = useState(initialEmail);
   const [requestId, setRequestId] = useState<string | null>(null);
   const [otp, setOtp] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isConfirming, setIsConfirming] = useState(false);
+  const [showEditFlow, setShowEditFlow] = useState(false);
+  const currentEmail = initialEmail.trim();
+
+  const showReadOnlyCard = useMemo(() => {
+    if (!currentEmail) return false;
+    if (verified) return true;
+    return loginIdentifierType === "mobile" && !showEditFlow;
+  }, [currentEmail, loginIdentifierType, showEditFlow, verified]);
+
+  const showConfirmButton = Boolean(currentEmail) && !verified && loginIdentifierType === "mobile" && !showEditFlow;
+
+  async function confirmCurrentEmail() {
+    setIsConfirming(true);
+    setMessage(null);
+
+    try {
+      const response = await fetch("/api/member/email/confirm-current", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        setMessage(payload.error ?? "Unable to confirm current email address.");
+        return;
+      }
+
+      router.refresh();
+    } finally {
+      setIsConfirming(false);
+    }
+  }
 
   async function requestOtp(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -81,7 +122,27 @@ export function EmailVerificationForm({ initialEmail = "", verified = false }: {
 
   return (
     <div className="grid gap-4">
-      {!requestId ? (
+      {showReadOnlyCard ? (
+        <MemberCurrentValueConfirmCard
+          label="email ID"
+          value={currentEmail}
+          instruction={
+            showConfirmButton
+              ? "Please click the Confirm button if you want to continue using the same email ID or click the Edit button if you want to change your email ID."
+              : "Please click the Edit button if you want to change your email ID."
+          }
+          showConfirm={showConfirmButton}
+          isConfirming={isConfirming}
+          onConfirm={() => void confirmCurrentEmail()}
+          onEdit={() => {
+            setShowEditFlow(true);
+            setRequestId(null);
+            setOtp("");
+            setEmail(currentEmail);
+            setMessage(null);
+          }}
+        />
+      ) : !requestId ? (
         <form onSubmit={requestOtp} className="soft-card rounded-[24px] p-5">
           <p className="font-mono text-xs uppercase tracking-[0.24em] text-[#3c589e]">Step 1</p>
           <h3 className="mt-2 text-lg font-semibold">Enter your email address</h3>

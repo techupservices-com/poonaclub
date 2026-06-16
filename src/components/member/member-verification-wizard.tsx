@@ -20,12 +20,14 @@ export function MemberVerificationWizard({
   requiresLinkedMemberCleanup,
   selfieItem,
   selfieUploaded,
+  loginIdentifierType,
 }: {
   member: MemberWithVerification;
   linkedMembers: MemberWithVerification[];
   requiresLinkedMemberCleanup: boolean;
   selfieItem: { id: string; fileName: string; previewUrl: string | null } | null;
   selfieUploaded: boolean;
+  loginIdentifierType?: "mobile" | "email";
 }) {
   const steps = useMemo(
     () =>
@@ -39,6 +41,7 @@ export function MemberVerificationWizard({
             <MobileChangeForm
               initialMobile={member.currentMobile}
               verified={member.verification.mobileVerified}
+              loginIdentifierType={loginIdentifierType}
             />
           ),
         },
@@ -47,7 +50,7 @@ export function MemberVerificationWizard({
           title: "Email ID verification / change",
           description: "Verify or update the email address attached to this member profile.",
           done: member.verification.emailVerified,
-          render: <EmailVerificationForm initialEmail={member.email} verified={member.verification.emailVerified} />,
+          render: <EmailVerificationForm initialEmail={member.email} verified={member.verification.emailVerified} loginIdentifierType={loginIdentifierType} />,
         },
         {
           key: "uploads" as const,
@@ -70,6 +73,7 @@ export function MemberVerificationWizard({
       ],
     [
       linkedMembers,
+      loginIdentifierType,
       member.email,
       member.currentMobile,
       member.verification.emailVerified,

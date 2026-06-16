@@ -6,6 +6,7 @@ interface SessionPayload {
   subject: string;
   role: "member" | "admin";
   expiresAt: number;
+  loginIdentifierType?: "mobile" | "email";
 }
 
 const secret = process.env.SESSION_SECRET ?? "poona-club-dev-session-secret";
@@ -32,11 +33,12 @@ function decode(token: string | undefined | null) {
   }
 }
 
-export function createSessionToken(subject: string, role: "member" | "admin") {
+export function createSessionToken(subject: string, role: "member" | "admin", options?: { loginIdentifierType?: "mobile" | "email" }) {
   return encode({
     subject,
     role,
     expiresAt: Date.now() + MEMBER_SESSION_HOURS * 60 * 60 * 1000,
+    ...(role === "member" && options?.loginIdentifierType ? { loginIdentifierType: options.loginIdentifierType } : {}),
   });
 }
 

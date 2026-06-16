@@ -41,7 +41,7 @@ export async function POST(request: Request) {
   const response = Response.json({ message: "Verified." });
   response.headers.append(
     "Set-Cookie",
-    `${MEMBER_SESSION_COOKIE}=${createSessionToken(body.profileId, "member")}; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400`,
+    `${MEMBER_SESSION_COOKIE}=${createSessionToken(body.profileId, "member", { loginIdentifierType: body.identifierType })}; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400`,
   );
 
   return response;
