@@ -4,6 +4,7 @@ import type { MemberWithVerification } from "@/lib/types";
 import { getRequiredSupabaseClient, type MemberVerificationSnapshotRow } from "@/lib/services/shared-db";
 
 type FilterKey = "verified" | "shared" | "inprogress" | "notstarted";
+const AUDIT_MEMBER_LOOKUP_CHUNK_SIZE = 200;
 
 const IST_DATE_TIME_FORMATTER = new Intl.DateTimeFormat("en-IN", {
   dateStyle: "short",
@@ -64,6 +65,19 @@ function getSummarySortColumn(sort: string) {
     default:
       return { column: "membership_id", ascending: true };
   }
+}
+
+async function getMembersByIdsBasicChunked(profileIds: string[]) {
+  if (!profileIds.length) return [];
+
+  const members = [] as Awaited<ReturnType<typeof getMembersByIdsBasic>>;
+  for (let index = 0; index < profileIds.length; index += AUDIT_MEMBER_LOOKUP_CHUNK_SIZE) {
+    const chunk = profileIds.slice(index, index + AUDIT_MEMBER_LOOKUP_CHUNK_SIZE);
+    const chunkMembers = await getMembersByIdsBasic(chunk);
+    members.push(...chunkMembers);
+  }
+
+  return members;
 }
 
 export async function getMemberDirectoryData({
@@ -186,7 +200,7 @@ export async function getAuditHistoryDataWithQuery({
 }) {
   const audits = await listAuditLogs();
   const targetIds = [...new Set(audits.map((entry) => entry.targetProfileId))];
-  const members = await getMembersByIdsBasic(targetIds);
+  const members = await getMembersByIdsBasicChunked(targetIds);
   const memberMap = new Map(
     members.map((member) => [
       member.id,
@@ -226,7 +240,7 @@ export async function getRecentAuditPreviewData(limit: number) {
   const audits = await listAuditLogs();
   const pageAudits = audits.slice(0, limit);
   const targetIds = [...new Set(pageAudits.map((entry) => entry.targetProfileId))];
-  const members = await getMembersByIdsBasic(targetIds);
+  const members = await getMembersByIdsBasicChunked(targetIds);
   const memberMap = new Map(
     members.map((member) => [member.id, { memberName: member.fullName, membershipId: member.membershipId, mobile: member.currentMobile }]),
   );
