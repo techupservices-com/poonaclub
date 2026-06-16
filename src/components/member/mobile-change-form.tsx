@@ -41,11 +41,13 @@ export function MobileChangeForm({
       const payload = await response.json();
       if (!response.ok) {
         setMessage(payload.error ?? "Unable to confirm current mobile number.");
+        setIsConfirming(false);
         return;
       }
 
       router.refresh();
-    } finally {
+    } catch {
+      setMessage("Unable to confirm current mobile number.");
       setIsConfirming(false);
     }
   }

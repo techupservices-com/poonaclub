@@ -45,11 +45,13 @@ export function EmailVerificationForm({
       const payload = await response.json();
       if (!response.ok) {
         setMessage(payload.error ?? "Unable to confirm current email address.");
+        setIsConfirming(false);
         return;
       }
 
       router.refresh();
-    } finally {
+    } catch {
+      setMessage("Unable to confirm current email address.");
       setIsConfirming(false);
     }
   }
