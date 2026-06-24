@@ -28,10 +28,17 @@ export default async function AdminMemberCardExportPage({
     <section className="grid gap-5">
       <style>{`
         @media print {
+          @page { size: A4 landscape; margin: 8mm; }
           nav, header, .print-actions { display: none !important; }
           body { background: white !important; }
-          .print-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
-          .print-card { break-inside: avoid; page-break-inside: avoid; box-shadow: none !important; }
+          .print-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 7px; }
+          .print-card { break-inside: avoid; page-break-inside: avoid; box-shadow: none !important; border-radius: 12px !important; padding: 8px !important; }
+          .print-photo { height: 112px !important; border-radius: 10px !important; }
+          .print-body { margin-top: 7px !important; }
+          .print-name { font-size: 12px !important; line-height: 1.2 !important; }
+          .print-meta { margin-top: 3px !important; font-size: 9px !important; line-height: 1.25 !important; }
+          .print-details { margin-top: 6px !important; gap: 2px !important; font-size: 8.5px !important; line-height: 1.25 !important; }
+          .print-address { line-height: 1.35 !important; }
         }
       `}</style>
       <div className="print-actions soft-card rounded-[24px] p-5">
@@ -45,20 +52,20 @@ export default async function AdminMemberCardExportPage({
           const photoUrl = getProfilePhotoPublicUrl(profile);
           return (
             <article key={profile.id} className="print-card soft-card rounded-[24px] p-5">
-              <div className="relative flex h-56 w-full items-center justify-center overflow-hidden rounded-[22px] border border-[var(--border)] bg-[#eef2fb] text-[#3c589e]">
+              <div className="print-photo relative flex h-56 w-full items-center justify-center overflow-hidden rounded-[22px] border border-[var(--border)] bg-[#eef2fb] text-[#3c589e]">
                 {photoUrl ? (
-                  <Image src={photoUrl} alt={`${profile.full_name} profile`} fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover" />
+                  <Image src={photoUrl} alt={`${profile.full_name} profile`} fill sizes="(max-width: 768px) 100vw, 25vw" className="object-contain" />
                 ) : (
                   <span className="text-sm font-semibold">No photo</span>
                 )}
               </div>
-              <div className="mt-4">
-                <h2 className="text-xl font-semibold text-[var(--foreground)]">{profile.full_name}</h2>
-                <p className="mt-2 text-sm text-[var(--muted)]">{profile.membership_id} · {profile.member_type ?? ""}</p>
-                <div className="mt-4 space-y-2 text-sm">
+              <div className="print-body mt-4">
+                <h2 className="print-name text-xl font-semibold text-[var(--foreground)]">{profile.full_name}</h2>
+                <p className="print-meta mt-2 text-sm text-[var(--muted)]">{profile.membership_id} · {profile.member_type ?? ""}</p>
+                <div className="print-details mt-4 space-y-2 text-sm">
                   <p className="text-[var(--muted)]">{profile.email ?? ""}</p>
                   <p className="font-medium text-[var(--foreground)]">{formatMobile(profile.current_mobile ?? "")}</p>
-                  <p className="leading-6 text-[var(--muted)]">{[profile.address1, profile.address2, profile.address3, profile.city, profile.pincode].filter(Boolean).join(", ")}</p>
+                  <p className="print-address leading-6 text-[var(--muted)]">{[profile.address1, profile.address2, profile.address3, profile.city, profile.pincode].filter(Boolean).join(", ")}</p>
                 </div>
               </div>
             </article>
