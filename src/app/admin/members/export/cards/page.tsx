@@ -28,17 +28,17 @@ export default async function AdminMemberCardExportPage({
     <section className="grid gap-5">
       <style>{`
         @media print {
-          @page { size: A4 landscape; margin: 8mm; }
+          @page { size: A4 portrait; margin: 7mm; }
           nav, header, .print-actions { display: none !important; }
           body { background: white !important; }
-          .print-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 7px; }
-          .print-card { break-inside: avoid; page-break-inside: avoid; box-shadow: none !important; border-radius: 12px !important; padding: 8px !important; }
-          .print-photo { height: 112px !important; border-radius: 10px !important; }
-          .print-body { margin-top: 7px !important; }
-          .print-name { font-size: 12px !important; line-height: 1.2 !important; }
+          .print-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+          .print-card { break-inside: avoid; page-break-inside: avoid; box-shadow: none !important; border-radius: 10px !important; padding: 7px !important; min-height: 64mm !important; }
+          .print-photo { height: 92px !important; border-radius: 9px !important; }
+          .print-body { margin-top: 6px !important; }
+          .print-name { font-size: 11.5px !important; line-height: 1.15 !important; }
           .print-meta { margin-top: 3px !important; font-size: 9px !important; line-height: 1.25 !important; }
-          .print-details { margin-top: 6px !important; gap: 2px !important; font-size: 8.5px !important; line-height: 1.25 !important; }
-          .print-address { line-height: 1.35 !important; }
+          .print-details { margin-top: 5px !important; gap: 1px !important; font-size: 8.2px !important; line-height: 1.22 !important; }
+          .print-address { line-height: 1.28 !important; }
         }
       `}</style>
       <div className="print-actions soft-card rounded-[24px] p-5">

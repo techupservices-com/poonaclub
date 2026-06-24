@@ -30,7 +30,7 @@ export function AvatarBadge({
           alt={`${name} profile`}
           fill
           sizes="(max-width: 768px) 64px, 224px"
-          className="object-cover"
+          className="object-contain"
           onError={() => setImageBroken(true)}
         />
       ) : (
