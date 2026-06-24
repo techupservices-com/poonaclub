@@ -1,5 +1,6 @@
 import { getMemberSession } from "@/lib/auth";
 import { addAuditLog, uploadMemberDocument } from "@/lib/data";
+import { clearAdminRejectionSteps } from "@/lib/services/admin-review-service";
 import { upsertVerificationSnapshot } from "@/lib/services/summary-service";
 
 export async function POST(request: Request) {
@@ -22,6 +23,7 @@ export async function POST(request: Request) {
       "selfie",
       "selfie",
     );
+    await clearAdminRejectionSteps(session.subject, ["selfie"]);
     await upsertVerificationSnapshot(session.subject);
   }
   await addAuditLog({ actorType: "member", actorId: session.subject, action: "Uploaded verification files", targetProfileId: session.subject, metadata: { scope: "uploads" } });

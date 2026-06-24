@@ -8,10 +8,12 @@ export function EmailVerificationForm({
   initialEmail = "",
   verified = false,
   loginIdentifierType,
+  adminRejectionMessage,
 }: {
   initialEmail?: string;
   verified?: boolean;
   loginIdentifierType?: "mobile" | "email";
+  adminRejectionMessage?: string | null;
 }) {
   const router = useRouter();
   const [email, setEmail] = useState(initialEmail);
@@ -124,6 +126,11 @@ export function EmailVerificationForm({
 
   return (
     <div className="grid gap-4">
+      {adminRejectionMessage !== undefined ? (
+        <div className="rounded-[20px] border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-800">
+          <strong>Admin review:</strong> This email address was marked pending. Please confirm or update it again.{adminRejectionMessage ? ` Message: ${adminRejectionMessage}` : ""}
+        </div>
+      ) : null}
       {showReadOnlyCard ? (
         <MemberCurrentValueConfirmCard
           label="email ID"

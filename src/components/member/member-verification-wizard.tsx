@@ -29,6 +29,14 @@ export function MemberVerificationWizard({
   selfieUploaded: boolean;
   loginIdentifierType?: "mobile" | "email";
 }) {
+  const adminReviewStatus = member.verification.adminReviewStatus ?? "pending";
+  const rejectedSteps = member.verification.adminRejectionSteps ?? [];
+  const adminApproved = adminReviewStatus === "approved";
+  const isMobileRejected = rejectedSteps.includes("mobile");
+  const isEmailRejected = rejectedSteps.includes("email");
+  const isSelfieRejected = rejectedSteps.includes("selfie");
+  const adminRejectionMessage = member.verification.adminRejectionMessage ?? null;
+
   const steps = useMemo(
     () =>
       [
@@ -36,12 +44,13 @@ export function MemberVerificationWizard({
           key: "mobile" as const,
           title: "Mobile number verification / change",
           description: "Verify or change the registered mobile number for this account.",
-          done: member.verification.mobileVerified,
+          done: adminApproved || (member.verification.mobileVerified && !isMobileRejected),
           render: (
             <MobileChangeForm
               initialMobile={member.currentMobile}
-              verified={member.verification.mobileVerified}
+              verified={adminApproved || (member.verification.mobileVerified && !isMobileRejected)}
               loginIdentifierType={loginIdentifierType}
+              adminRejectionMessage={isMobileRejected ? adminRejectionMessage : undefined}
             />
           ),
         },
@@ -49,15 +58,15 @@ export function MemberVerificationWizard({
           key: "email" as const,
           title: "Email ID verification / change",
           description: "Verify or update the email address attached to this member profile.",
-          done: member.verification.emailVerified,
-          render: <EmailVerificationForm initialEmail={member.email} verified={member.verification.emailVerified} loginIdentifierType={loginIdentifierType} />,
+          done: adminApproved || (member.verification.emailVerified && !isEmailRejected),
+          render: <EmailVerificationForm initialEmail={member.email} verified={adminApproved || (member.verification.emailVerified && !isEmailRejected)} loginIdentifierType={loginIdentifierType} adminRejectionMessage={isEmailRejected ? adminRejectionMessage : undefined} />,
         },
         {
           key: "uploads" as const,
           title: "Selfie upload / replace",
           description: "Upload or replace your selfie to complete this verification step.",
-          done: member.verification.selfieUploaded,
-          render: <MemberSelfieUploader photoUrl={selfieItem?.previewUrl ?? null} hasSelfie={selfieUploaded} variant="panel" />,
+          done: adminApproved || (member.verification.selfieUploaded && !isSelfieRejected),
+          render: <MemberSelfieUploader photoUrl={selfieItem?.previewUrl ?? null} hasSelfie={selfieUploaded} variant="panel" adminRejectionMessage={isSelfieRejected ? adminRejectionMessage : undefined} />,
         },
         ...(requiresLinkedMemberCleanup
           ? [
@@ -73,6 +82,11 @@ export function MemberVerificationWizard({
       ],
     [
       linkedMembers,
+      adminApproved,
+      adminRejectionMessage,
+      isEmailRejected,
+      isMobileRejected,
+      isSelfieRejected,
       loginIdentifierType,
       member.email,
       member.currentMobile,

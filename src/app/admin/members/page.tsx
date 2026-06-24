@@ -5,7 +5,7 @@ import { getMemberDirectoryData } from "@/lib/data";
 export const dynamic = "force-dynamic";
 
 function parseFilters(value?: string) {
-  return (value?.split(",").filter(Boolean) as Array<"verified" | "shared" | "inprogress" | "notstarted">) ?? [];
+  return (value?.split(",").filter(Boolean) as Array<"verified" | "approved" | "disapproved" | "shared" | "inprogress" | "notstarted">) ?? [];
 }
 
 export default async function AdminMembersPage({

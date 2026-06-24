@@ -1,4 +1,4 @@
-import { getRequiredSupabaseClient, type ProfileRow } from "@/lib/services/shared-db";
+import { getRequiredSupabaseClient, type MemberAdminReviewRow, type ProfileRow } from "@/lib/services/shared-db";
 import { normalizeMobile } from "@/lib/utils";
 
 function buildPublicSelfieUrl(filePath: string | null) {
@@ -31,7 +31,7 @@ export async function buildVerificationSnapshotRow(profileId: string) {
   const row = profile as ProfileRow;
   const normalizedMobile = normalizeMobile(row.current_mobile ?? "");
 
-  const [selfieRes, sharedRes, ownerRes] = await Promise.all([
+  const [selfieRes, sharedRes, ownerRes, reviewRes] = await Promise.all([
     client
       .from("member_documents")
       .select("id,file_path")
@@ -45,11 +45,13 @@ export async function buildVerificationSnapshotRow(profileId: string) {
     normalizedMobile
       ? client.from("mobile_login_owners").select("profile_id").eq("mobile", normalizedMobile).maybeSingle()
       : Promise.resolve({ data: null, error: null } as const),
+    client.from("member_admin_reviews").select("*").eq("profile_id", profileId).maybeSingle(),
   ]);
 
   if (selfieRes.error) throw selfieRes.error;
   if (sharedRes.error) throw sharedRes.error;
   if (ownerRes.error) throw ownerRes.error;
+  if (reviewRes.error) throw reviewRes.error;
 
   const selfieUploaded = Boolean(selfieRes.data);
   const profileComplete = computeProfileComplete(row);
@@ -63,6 +65,9 @@ export async function buildVerificationSnapshotRow(profileId: string) {
     selfieUploaded &&
     profileComplete &&
     !sharedMobilePending;
+  const review = (reviewRes.data as MemberAdminReviewRow | null) ?? null;
+  const adminReviewStatus = review?.status ?? "pending";
+  const adminReviewedAt = review?.approved_at ?? review?.disapproved_at ?? null;
 
   return {
     profile_id: row.id,
@@ -81,6 +86,10 @@ export async function buildVerificationSnapshotRow(profileId: string) {
     is_mobile_login_owner: isMobileLoginOwner,
     shared_mobile_pending: sharedMobilePending,
     completed,
+    admin_review_status: adminReviewStatus,
+    admin_reviewed_at: adminReviewedAt,
+    admin_rejection_steps: review?.disapproved_steps ?? [],
+    admin_rejection_message: review?.disapproval_message ?? null,
     photo_public_url: buildPublicSelfieUrl(row.photo_url ?? (selfieRes.data?.file_path ?? null)),
     updated_at: new Date().toISOString(),
   };

@@ -11,6 +11,8 @@ import type {
   BroadcastEmailCampaign,
   BroadcastEmailPreview,
   BroadcastEmailSelectionMode,
+  AdminReviewStep,
+  AdminSelectionMode,
   MemberDirectoryFilterKey,
   MemberWithVerification,
 } from "@/lib/types";
@@ -35,7 +37,7 @@ export function MemberDirectory({
   sort,
 }: {
   members: MemberWithVerification[];
-  counts: { all: number; verified: number; inprogress: number; notstarted: number; shared: number };
+  counts: { all: number; verified: number; approved: number; disapproved: number; inprogress: number; notstarted: number; shared: number };
   total: number;
   currentPage: number;
   pageSize: number;
@@ -62,11 +64,19 @@ export function MemberDirectory({
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const [isSubmittingCampaign, setIsSubmittingCampaign] = useState(false);
+  const [actionMessage, setActionMessage] = useState<string | null>(null);
+  const [isReviewSubmitting, setIsReviewSubmitting] = useState(false);
+  const [isExcelDownloading, setIsExcelDownloading] = useState(false);
+  const [selectionModeForActions, setSelectionModeForActions] = useState<AdminSelectionMode>("selected_ids");
+  const [disapproveOpen, setDisapproveOpen] = useState(false);
+  const [disapproveSteps, setDisapproveSteps] = useState<AdminReviewStep[]>([]);
+  const [disapproveMessage, setDisapproveMessage] = useState("");
 
   const pageCount = Math.max(1, Math.ceil(currentTotal / pageSize));
   const visibleIds = useMemo(() => currentMembers.map((member) => member.id), [currentMembers]);
   const selectedVisibleCount = selectedIds.filter((id) => visibleIds.includes(id)).length;
   const allVisibleSelected = visibleIds.length > 0 && selectedVisibleCount === visibleIds.length;
+  const actionSelectionCount = selectionModeForActions === "all_filtered" ? currentTotal : selectedIds.length;
 
   const loadCampaigns = useCallback(async () => {
     setIsCampaignsLoading(true);
@@ -159,19 +169,134 @@ export function MemberDirectory({
   const filterOptions = [
     { value: "inprogress" as const, label: "In Progress", count: currentCounts.inprogress },
     { value: "verified" as const, label: "Verified", count: currentCounts.verified },
+    { value: "approved" as const, label: "Approved", count: currentCounts.approved },
+    { value: "disapproved" as const, label: "Disapproved", count: currentCounts.disapproved },
     { value: "notstarted" as const, label: "Not Started", count: currentCounts.notstarted },
     { value: "shared" as const, label: "Shared mobile", count: currentCounts.shared },
   ];
 
   function toggleSelected(id: string) {
+    setSelectionModeForActions("selected_ids");
     setSelectedIds((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]));
   }
 
   function toggleSelectVisible() {
     setSelectedIds((prev) => {
       if (allVisibleSelected) return prev.filter((id) => !visibleIds.includes(id));
+      setSelectionModeForActions("selected_ids");
       return [...new Set([...prev, ...visibleIds])];
     });
+  }
+
+  function clearSelection() {
+    setSelectedIds([]);
+    setSelectionModeForActions("selected_ids");
+    setActionMessage(null);
+  }
+
+  function getReviewPayload(action: "approve" | "disapprove", extra?: { steps?: AdminReviewStep[]; message?: string; selectedIdsOverride?: string[] }) {
+    const ids = extra?.selectedIdsOverride ?? selectedIds;
+    return {
+      action,
+      selectionMode: extra?.selectedIdsOverride ? "selected_ids" : selectionModeForActions,
+      selectedIds: extra?.selectedIdsOverride || selectionModeForActions === "selected_ids" ? ids : undefined,
+      query,
+      filters,
+      ...(extra?.steps ? { steps: extra.steps } : {}),
+      ...(extra?.message !== undefined ? { message: extra.message } : {}),
+    };
+  }
+
+  async function submitReview(action: "approve" | "disapprove", extra?: { steps?: AdminReviewStep[]; message?: string; selectedIdsOverride?: string[] }) {
+    if (!extra?.selectedIdsOverride && selectionModeForActions === "selected_ids" && selectedIds.length === 0) return;
+    setIsReviewSubmitting(true);
+    setActionMessage(null);
+    try {
+      const response = await fetch("/api/admin/members/review", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(getReviewPayload(action, extra)),
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        setActionMessage(payload.error ?? "Unable to update admin review status.");
+        return;
+      }
+      const nextMessage = payload.message ?? "Admin review status updated.";
+      setDisapproveOpen(false);
+      setDisapproveSteps([]);
+      setDisapproveMessage("");
+      clearSelection();
+      setActionMessage(nextMessage);
+      await refresh();
+    } catch {
+      setActionMessage("Unable to update admin review status.");
+    } finally {
+      setIsReviewSubmitting(false);
+    }
+  }
+
+  async function downloadExcel() {
+    if (selectionModeForActions === "selected_ids" && selectedIds.length === 0) return;
+    setIsExcelDownloading(true);
+    setActionMessage(null);
+    try {
+      const response = await fetch("/api/admin/members/export/excel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          selectionMode: selectionModeForActions,
+          selectedIds: selectionModeForActions === "selected_ids" ? selectedIds : undefined,
+          query,
+          filters,
+        }),
+      });
+      if (!response.ok) {
+        setActionMessage("Unable to prepare Excel download.");
+        return;
+      }
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `poona-club-members-${new Date().toISOString().slice(0, 10)}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      setActionMessage("Unable to prepare Excel download.");
+    } finally {
+      setIsExcelDownloading(false);
+    }
+  }
+
+  function getPrintHref() {
+    const params = new URLSearchParams();
+    params.set("selectionMode", selectionModeForActions);
+    if (selectionModeForActions === "selected_ids") params.set("ids", selectedIds.join(","));
+    if (query) params.set("q", query);
+    if (filters.length) params.set("filters", filters.join(","));
+    return `/admin/members/export/cards${params.toString() ? `?${params.toString()}` : ""}`;
+  }
+
+  function getMemberStatus(member: MemberWithVerification) {
+    const reviewStatus = member.verification.adminReviewStatus ?? "pending";
+    if (reviewStatus === "approved") return { label: "Admin approved", tone: "success" as const };
+    if (reviewStatus === "disapproved") return { label: "Admin disapproved", tone: "danger" as const };
+    if (member.verification.completed) return { label: "Verified", tone: "success" as const };
+    const started = member.verification.mobileVerified || member.verification.emailVerified || member.verification.selfieUploaded;
+    return { label: started ? "In progress" : "Not started", tone: "warning" as const };
+  }
+
+  function getStepChip(member: MemberWithVerification, step: AdminReviewStep) {
+    const reviewStatus = member.verification.adminReviewStatus ?? "pending";
+    const rejected = member.verification.adminRejectionSteps?.includes(step);
+    if (reviewStatus === "approved") return { label: `${step === "selfie" ? "Selfie" : step === "mobile" ? "Mobile" : "Email"} admin approved`, tone: "success" as const };
+    if (rejected) return { label: `${step === "selfie" ? "Selfie" : step === "mobile" ? "Mobile" : "Email"} rejected`, tone: "danger" as const };
+    if (step === "mobile") return { label: member.verification.mobileVerified ? "Mobile verified" : "Mobile pending", tone: member.verification.mobileVerified ? "success" as const : "warning" as const };
+    if (step === "email") return { label: member.verification.emailVerified ? "Email verified" : "Email pending", tone: member.verification.emailVerified ? "success" as const : "warning" as const };
+    return { label: member.verification.selfieUploaded ? "Selfie uploaded" : "Selfie pending", tone: member.verification.selfieUploaded ? "success" as const : "warning" as const };
   }
 
   async function openCampaignModal(mode: BroadcastEmailSelectionMode) {
@@ -389,6 +514,60 @@ export function MemberDirectory({
           </div>
         ) : null}
 
+        <div className="soft-card rounded-[24px] p-4">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p className="font-mono text-xs uppercase tracking-[0.24em] text-[#3c589e]">Selection</p>
+              <p className="mt-2 text-sm text-[var(--muted)]">
+                {selectionModeForActions === "all_filtered"
+                  ? `All ${currentTotal} members matching this search/filter are selected.`
+                  : `${selectedIds.length} member${selectedIds.length === 1 ? "" : "s"} selected.`}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button onClick={toggleSelectVisible} className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-medium text-[var(--foreground)] hover:border-[#6f84ba] hover:bg-[#eef2fb]">
+                {allVisibleSelected ? "Clear visible" : "Select visible page"}
+              </button>
+              <button disabled={currentTotal === 0} onClick={() => setSelectionModeForActions("all_filtered")} className="rounded-full border border-[#6f84ba] bg-[#eef2fb] px-4 py-2 text-sm font-semibold text-[#3c589e] hover:bg-[#dfe7f8] disabled:cursor-not-allowed disabled:opacity-50">
+                Select all filtered ({currentTotal})
+              </button>
+              <button disabled={!selectedIds.length && selectionModeForActions !== "all_filtered"} onClick={clearSelection} className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-medium text-[var(--foreground)] hover:border-[#6f84ba] hover:bg-[#eef2fb] disabled:cursor-not-allowed disabled:opacity-50">
+                Clear selection
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {actionSelectionCount > 0 ? (
+          <div className="soft-card rounded-[24px] p-4">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <p className="font-mono text-xs uppercase tracking-[0.24em] text-[#3c589e]">Bulk actions</p>
+                <p className="mt-2 text-sm text-[var(--muted)]">Actions apply to {actionSelectionCount} selected member{actionSelectionCount === 1 ? "" : "s"}.</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button disabled={isReviewSubmitting} onClick={() => void submitReview("approve")} className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50">
+                  {isReviewSubmitting ? "Updating..." : "Bulk approve"}
+                </button>
+                <button disabled={isReviewSubmitting} onClick={() => setDisapproveOpen(true)} className="rounded-full bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50">
+                  Bulk disapprove
+                </button>
+                <button disabled={isExcelDownloading} onClick={() => void downloadExcel()} className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--foreground)] hover:border-[#6f84ba] hover:bg-[#eef2fb] disabled:cursor-not-allowed disabled:opacity-50">
+                  {isExcelDownloading ? "Preparing..." : "Download Excel"}
+                </button>
+                <Link href={getPrintHref()} target="_blank" className="rounded-full border border-[#6f84ba] bg-[#eef2fb] px-4 py-2 text-sm font-semibold text-[#3c589e] hover:bg-[#dfe7f8]">
+                  Print/export cards
+                </Link>
+              </div>
+            </div>
+            {actionMessage ? <p className="mt-3 text-sm font-semibold text-[var(--foreground)]">{actionMessage}</p> : null}
+          </div>
+        ) : null}
+
+        {actionSelectionCount === 0 && actionMessage ? (
+          <p className="rounded-[18px] border border-[var(--border)] bg-white px-4 py-3 text-sm font-semibold text-[var(--foreground)]">{actionMessage}</p>
+        ) : null}
+
         <div className="flex justify-end">
           <div className="grid w-full grid-cols-2 gap-3 md:w-[260px]">
             <button onClick={() => updateParams({ view: "grid" })} className={cn("h-12 rounded-2xl border px-4 py-3 text-sm font-medium", view === "grid" ? "border-[#6f84ba] bg-[#3c589e] text-white" : "border-[var(--border)] bg-white text-[var(--foreground)] hover:border-[#6f84ba] hover:bg-[#eef2fb]")}>Grid</button>
@@ -399,6 +578,10 @@ export function MemberDirectory({
         <div className={cn("grid gap-4", view === "grid" ? "md:grid-cols-2 xl:grid-cols-3" : "grid-cols-1")}>
           {currentMembers.map((member) => {
             const isSelected = selectedIds.includes(member.id);
+            const memberStatus = getMemberStatus(member);
+            const mobileChip = getStepChip(member, "mobile");
+            const emailChip = getStepChip(member, "email");
+            const selfieChip = getStepChip(member, "selfie");
             return (
               <article key={member.id} className={cn("soft-card rounded-[24px] p-5", isSelected && "ring-2 ring-[#6f84ba]", view === "list" && "md:flex md:items-start md:justify-between md:gap-6")}>
                 {view === "grid" ? (
@@ -411,16 +594,16 @@ export function MemberDirectory({
                         <div className="min-w-0">
                           <h3 className="text-xl font-semibold text-[var(--foreground)]">{member.fullName}</h3>
                         </div>
-                        <StatusChip label={member.verification.completed ? "Verified" : "In progress"} tone={member.verification.completed ? "success" : "warning"} />
+                        <StatusChip label={memberStatus.label} tone={memberStatus.tone} />
                       </div>
                       <p className="mt-2 text-sm text-[var(--muted)]">{member.membershipId} · {member.memberType}</p>
                       <div className="mt-4 space-y-2 text-sm">
                         <p className="text-[var(--muted)]">{member.email}</p>
                         <p className="font-medium text-[var(--foreground)]">{formatMobile(member.currentMobile)}</p>
                         <div className="flex flex-wrap gap-2 pt-1">
-                          <StatusChip label={member.verification.mobileVerified ? "Mobile verified" : "Mobile pending"} tone={member.verification.mobileVerified ? "success" : "warning"} />
-                          <StatusChip label={member.verification.emailVerified ? "Email verified" : "Email pending"} tone={member.verification.emailVerified ? "success" : "warning"} />
-                          <StatusChip label={member.verification.selfieUploaded ? "Selfie uploaded" : "Selfie pending"} tone={member.verification.selfieUploaded ? "success" : "warning"} />
+                          <StatusChip label={mobileChip.label} tone={mobileChip.tone} />
+                          <StatusChip label={emailChip.label} tone={emailChip.tone} />
+                          <StatusChip label={selfieChip.label} tone={selfieChip.tone} />
                         </div>
                       </div>
                       <div className="mt-5 flex items-center justify-between gap-3">
@@ -429,8 +612,8 @@ export function MemberDirectory({
                           Select member
                         </label>
                         <div className="flex gap-2">
-                          <Link href={`/admin/members/${member.id}`} className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-medium text-[var(--foreground)] hover:border-[#6f84ba] hover:bg-[#eef2fb]">View</Link>
-                          <Link href={`/admin/members/${member.id}/edit`} className="rounded-full bg-stone-200 px-4 py-2 text-sm font-medium text-stone-700 hover:bg-stone-300">Edit</Link>
+                          <button disabled={isReviewSubmitting} onClick={() => void submitReview("approve", { selectedIdsOverride: [member.id] })} className="rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-100 disabled:opacity-50">Approve</button>
+                          <button disabled={isReviewSubmitting} onClick={() => { setSelectionModeForActions("selected_ids"); setSelectedIds([member.id]); setDisapproveOpen(true); }} className="rounded-full bg-red-100 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-200 disabled:opacity-50">Disapprove</button>
                         </div>
                       </div>
                     </div>
@@ -442,15 +625,15 @@ export function MemberDirectory({
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-start justify-between gap-2">
                           <h3 className="text-lg font-semibold text-[var(--foreground)]">{member.fullName}</h3>
-                          <StatusChip label={member.verification.completed ? "Verified" : "In progress"} tone={member.verification.completed ? "success" : "warning"} />
+                          <StatusChip label={memberStatus.label} tone={memberStatus.tone} />
                         </div>
                         <p className="mt-2 text-sm text-[var(--muted)]">{member.membershipId} · {member.memberType}</p>
                         <p className="mt-3 text-sm text-[var(--muted)]">{member.email}</p>
                         <p className="mt-2 text-sm text-[var(--foreground)]">{formatMobile(member.currentMobile)}</p>
                         <div className="mt-3 flex flex-wrap gap-2">
-                          <StatusChip label={member.verification.mobileVerified ? "Mobile verified" : "Mobile pending"} tone={member.verification.mobileVerified ? "success" : "warning"} />
-                          <StatusChip label={member.verification.emailVerified ? "Email verified" : "Email pending"} tone={member.verification.emailVerified ? "success" : "warning"} />
-                          <StatusChip label={member.verification.selfieUploaded ? "Selfie uploaded" : "Selfie pending"} tone={member.verification.selfieUploaded ? "success" : "warning"} />
+                          <StatusChip label={mobileChip.label} tone={mobileChip.tone} />
+                          <StatusChip label={emailChip.label} tone={emailChip.tone} />
+                          <StatusChip label={selfieChip.label} tone={selfieChip.tone} />
                         </div>
                       </div>
                     </div>
@@ -460,8 +643,8 @@ export function MemberDirectory({
                         Select member
                       </label>
                       <div className="flex gap-2">
-                        <Link href={`/admin/members/${member.id}`} className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-medium text-[var(--foreground)] hover:border-[#6f84ba] hover:bg-[#eef2fb]">View</Link>
-                        <Link href={`/admin/members/${member.id}/edit`} className="rounded-full bg-stone-200 px-4 py-2 text-sm font-medium text-stone-700 hover:bg-stone-300">Edit</Link>
+                        <button disabled={isReviewSubmitting} onClick={() => void submitReview("approve", { selectedIdsOverride: [member.id] })} className="rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-100 disabled:opacity-50">Approve</button>
+                        <button disabled={isReviewSubmitting} onClick={() => { setSelectionModeForActions("selected_ids"); setSelectedIds([member.id]); setDisapproveOpen(true); }} className="rounded-full bg-red-100 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-200 disabled:opacity-50">Disapprove</button>
                       </div>
                     </div>
                   </div>
@@ -488,6 +671,67 @@ export function MemberDirectory({
         </div>
         {error ? <p className="text-sm font-semibold text-red-600">{error}</p> : null}
       </div>
+
+      {disapproveOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-950/50 px-4 py-8">
+          <div className="w-full max-w-xl rounded-[28px] bg-[#f8f9fc] p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="font-mono text-xs uppercase tracking-[0.24em] text-red-600">Admin disapproval</p>
+                <h2 className="mt-2 text-2xl font-semibold text-[var(--foreground)]">Select items to mark pending</h2>
+                <p className="mt-2 text-sm leading-6 text-[var(--muted)]">The member will see the existing record with a rejection message and instructions to update it again.</p>
+              </div>
+              <button onClick={() => setDisapproveOpen(false)} className="rounded-full border border-[var(--border)] bg-white p-2 text-[var(--foreground)] hover:border-[#6f84ba] hover:bg-[#eef2fb]">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="mt-6 grid gap-3 sm:grid-cols-3">
+              {([
+                ["selfie", "Selfie image"],
+                ["mobile", "Mobile number"],
+                ["email", "Email"],
+              ] as Array<[AdminReviewStep, string]>).map(([value, label]) => {
+                const checked = disapproveSteps.includes(value);
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setDisapproveSteps((current) => (current.includes(value) ? current.filter((step) => step !== value) : [...current, value]))}
+                    className={cn(
+                      "rounded-[20px] border px-4 py-4 text-left text-sm font-semibold",
+                      checked ? "border-red-300 bg-red-50 text-red-700" : "border-[var(--border)] bg-white text-[var(--foreground)] hover:border-red-200 hover:bg-red-50",
+                    )}
+                  >
+                    <span className="block">{label}</span>
+                    <span className="mt-2 block text-xs font-medium text-[var(--muted)]">{checked ? "Selected" : "Click to select"}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <label className="mt-5 grid gap-2 text-sm font-medium text-[var(--foreground)]">
+              Optional admin message
+              <textarea
+                value={disapproveMessage}
+                onChange={(event) => setDisapproveMessage(event.target.value)}
+                rows={4}
+                className="rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-[var(--foreground)]"
+                placeholder="Explain what needs to be corrected."
+              />
+            </label>
+
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
+              <button onClick={() => setDisapproveOpen(false)} className="rounded-full border border-[var(--border)] bg-white px-5 py-3 text-sm font-semibold text-[var(--foreground)] hover:border-[#6f84ba] hover:bg-[#eef2fb]">
+                Cancel
+              </button>
+              <button disabled={isReviewSubmitting || disapproveSteps.length === 0} onClick={() => void submitReview("disapprove", { steps: disapproveSteps, message: disapproveMessage })} className="rounded-full bg-red-600 px-5 py-3 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50">
+                {isReviewSubmitting ? "Updating..." : "Confirm disapproval"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {isModalOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-950/50 px-4 py-8">

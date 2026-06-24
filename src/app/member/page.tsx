@@ -24,6 +24,8 @@ export default async function MemberDashboardPage() {
   const requiresLinkedMemberCleanup =
     linkedMembers.length > 1 && linkedMembers.some((entry) => !entry.mobileVerified);
   const mobileOwner = await isMobileLoginOwner(member.id, member.currentMobile);
+  const rejectedSteps = member.verification.adminRejectionSteps ?? [];
+  const adminRejectionMessage = member.verification.adminRejectionMessage ?? null;
 
   return (
     <>
@@ -44,6 +46,7 @@ export default async function MemberDashboardPage() {
               <MemberSelfieUploader
                 photoUrl={profilePhotoUrl}
                 hasSelfie={documents.some((document) => document.documentGroup === "selfie")}
+                adminRejectionMessage={rejectedSteps.includes("selfie") ? adminRejectionMessage : undefined}
               />
 
               <div className="grid gap-3 md:grid-cols-2">

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { getMemberSession } from "@/lib/auth";
 import { addAuditLog, completeMobileChangeRequest, findVerifiedMobileOwnerFast, getMobileChangeRequest, reassignMobileLoginOwnerIfNeeded, setMobileLoginOwner, upsertVerificationSnapshot } from "@/lib/data";
+import { clearAdminRejectionSteps } from "@/lib/services/admin-review-service";
 import { verifyOtp } from "@/lib/otp-store";
 
 export async function POST(request: Request) {
@@ -28,6 +29,7 @@ export async function POST(request: Request) {
   if (requestRecord.oldMobile) {
     await reassignMobileLoginOwnerIfNeeded(requestRecord.oldMobile);
   }
+  await clearAdminRejectionSteps(requestRecord.profileId, ["mobile"]);
   await upsertVerificationSnapshot(requestRecord.profileId);
   await addAuditLog({ actorType: "member", actorId: session.subject, action: "Verified personal mobile change", targetProfileId: session.subject, metadata: { requestId: body.requestId } });
   return Response.json({ message: "New mobile number verified and activated." });

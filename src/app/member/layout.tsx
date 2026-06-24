@@ -18,16 +18,18 @@ export default async function MemberLayout({ children }: { children: React.React
   const requiresLinkedMemberCleanup =
     linkedMembers.length > 1 && linkedMembers.some((entry) => !entry.mobileVerified);
   const totalSteps = requiresLinkedMemberCleanup ? 4 : 3;
+  const adminApproved = member.verification.adminReviewStatus === "approved";
+  const rejectedSteps = member.verification.adminRejectionSteps ?? [];
   const completedSteps = [
-    member.verification.mobileVerified,
-    member.verification.emailVerified,
-    member.verification.selfieUploaded,
+    adminApproved || (member.verification.mobileVerified && !rejectedSteps.includes("mobile")),
+    adminApproved || (member.verification.emailVerified && !rejectedSteps.includes("email")),
+    adminApproved || (member.verification.selfieUploaded && !rejectedSteps.includes("selfie")),
     !requiresLinkedMemberCleanup,
   ].slice(0, totalSteps).filter(Boolean).length;
   const nextPendingStep = [
-    !member.verification.mobileVerified ? "Verify your mobile number" : null,
-    !member.verification.emailVerified ? "Verify your email address" : null,
-    !member.verification.selfieUploaded
+    !adminApproved && (!member.verification.mobileVerified || rejectedSteps.includes("mobile")) ? "Verify your mobile number" : null,
+    !adminApproved && (!member.verification.emailVerified || rejectedSteps.includes("email")) ? "Verify your email address" : null,
+    !adminApproved && (!member.verification.selfieUploaded || rejectedSteps.includes("selfie"))
       ? "Upload your selfie"
       : null,
     requiresLinkedMemberCleanup ? "Resolve shared family mobile numbers" : null,
@@ -53,12 +55,14 @@ export default async function MemberLayout({ children }: { children: React.React
               </p>
             </div>
             <StatusChip
-              label={member.verification.completed ? "Verified" : "Pending"}
-              tone={member.verification.completed ? "success" : "warning"}
+              label={adminApproved ? "Admin approved" : member.verification.completed && rejectedSteps.length === 0 ? "Verified" : "Pending"}
+              tone={adminApproved || (member.verification.completed && rejectedSteps.length === 0) ? "success" : "warning"}
             />
           </div>
           <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
-            {member.verification.completed
+            {adminApproved
+              ? "Your membership has been approved by the admin."
+              : member.verification.completed && rejectedSteps.length === 0
               ? "All required steps are complete. Your membership is verified."
               : nextPendingStep
                 ? `Next step: ${nextPendingStep}`

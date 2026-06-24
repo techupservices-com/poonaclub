@@ -1,5 +1,5 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import type { AuditLog, MemberDocument, MemberProfile, MobileChangeRequest } from "@/lib/types";
+import type { AdminReviewStatus, AuditLog, MemberDocument, MemberProfile, MobileChangeRequest } from "@/lib/types";
 
 const DB_BATCH_SIZE = 1000;
 
@@ -87,6 +87,10 @@ export interface MemberVerificationSummaryRow {
   is_mobile_login_owner: boolean;
   shared_mobile_pending: boolean;
   completed: boolean;
+  admin_review_status?: AdminReviewStatus | null;
+  admin_reviewed_at?: string | null;
+  admin_rejection_steps?: string[] | null;
+  admin_rejection_message?: string | null;
 }
 
 export interface MemberVerificationSnapshotRow {
@@ -106,7 +110,23 @@ export interface MemberVerificationSnapshotRow {
   is_mobile_login_owner: boolean;
   shared_mobile_pending: boolean;
   completed: boolean;
+  admin_review_status?: AdminReviewStatus | null;
+  admin_reviewed_at?: string | null;
+  admin_rejection_steps?: string[] | null;
+  admin_rejection_message?: string | null;
   photo_public_url: string | null;
+  updated_at: string;
+}
+
+export interface MemberAdminReviewRow {
+  profile_id: string;
+  status: AdminReviewStatus;
+  approved_by: string | null;
+  approved_at: string | null;
+  disapproved_by: string | null;
+  disapproved_at: string | null;
+  disapproved_steps: string[] | null;
+  disapproval_message: string | null;
   updated_at: string;
 }
 

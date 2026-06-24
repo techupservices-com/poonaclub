@@ -82,6 +82,18 @@ create table if not exists audit_logs (
   created_at timestamptz not null default now()
 );
 
+create table if not exists member_admin_reviews (
+  profile_id uuid primary key references profiles(id) on delete cascade,
+  status text not null default 'pending' check (status in ('pending', 'approved', 'disapproved')),
+  approved_by text,
+  approved_at timestamptz,
+  disapproved_by text,
+  disapproved_at timestamptz,
+  disapproved_steps text[] not null default '{}',
+  disapproval_message text,
+  updated_at timestamptz not null default now()
+);
+
 create table if not exists member_verification_snapshot (
   profile_id uuid primary key references profiles(id) on delete cascade,
   membership_id text,
@@ -99,9 +111,19 @@ create table if not exists member_verification_snapshot (
   is_mobile_login_owner boolean not null default false,
   shared_mobile_pending boolean not null default false,
   completed boolean not null default false,
+  admin_review_status text not null default 'pending' check (admin_review_status in ('pending', 'approved', 'disapproved')),
+  admin_reviewed_at timestamptz,
+  admin_rejection_steps text[] not null default '{}',
+  admin_rejection_message text,
   photo_public_url text,
   updated_at timestamptz not null default now()
 );
+
+alter table if exists member_verification_snapshot
+  add column if not exists admin_review_status text not null default 'pending',
+  add column if not exists admin_reviewed_at timestamptz,
+  add column if not exists admin_rejection_steps text[] not null default '{}',
+  add column if not exists admin_rejection_message text;
 
 create table if not exists broadcast_emails (
   id uuid primary key default gen_random_uuid(),
@@ -169,6 +191,7 @@ create index if not exists idx_mvs_full_name on member_verification_snapshot (fu
 create index if not exists idx_mvs_current_mobile on member_verification_snapshot (current_mobile);
 create index if not exists idx_mvs_email on member_verification_snapshot (email);
 create index if not exists idx_mvs_completed on member_verification_snapshot (completed);
+create index if not exists idx_mvs_admin_review_status on member_verification_snapshot (admin_review_status);
 create index if not exists idx_mvs_shared_mobile_pending on member_verification_snapshot (shared_mobile_pending);
 create index if not exists idx_mvs_updated_at on member_verification_snapshot (updated_at desc);
 create index if not exists idx_broadcast_emails_status_created_at on broadcast_emails (status, created_at desc);

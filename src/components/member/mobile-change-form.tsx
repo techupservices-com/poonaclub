@@ -10,10 +10,12 @@ export function MobileChangeForm({
   initialMobile = "",
   verified = false,
   loginIdentifierType,
+  adminRejectionMessage,
 }: {
   initialMobile?: string;
   verified?: boolean;
   loginIdentifierType?: "mobile" | "email";
+  adminRejectionMessage?: string | null;
 }) {
   const router = useRouter();
   const [showEditFlow, setShowEditFlow] = useState(false);
@@ -55,6 +57,11 @@ export function MobileChangeForm({
   if (showReadOnlyCard) {
     return (
       <div className="grid gap-4">
+        {adminRejectionMessage !== undefined ? (
+          <div className="rounded-[20px] border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-800">
+            <strong>Admin review:</strong> This mobile number was marked pending. Please confirm or update it again.{adminRejectionMessage ? ` Message: ${adminRejectionMessage}` : ""}
+          </div>
+        ) : null}
         <MemberCurrentValueConfirmCard
           label="mobile number"
           value={formatMobile(initialMobile)}
@@ -78,6 +85,11 @@ export function MobileChangeForm({
 
   return (
     <div className="grid gap-4">
+      {adminRejectionMessage !== undefined ? (
+        <div className="rounded-[20px] border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-800">
+          <strong>Admin review:</strong> This mobile number was marked pending. Please verify or update it again.{adminRejectionMessage ? ` Message: ${adminRejectionMessage}` : ""}
+        </div>
+      ) : null}
       <MobileOtpFlow
         title="Enter your mobile number"
         description="Enter the mobile number you want to verify for your member account."

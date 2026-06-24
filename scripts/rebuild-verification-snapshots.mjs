@@ -30,7 +30,7 @@ function computeProfileComplete(profile) {
 
 async function buildSnapshot(profile) {
   const normalizedMobile = normalizeMobile(profile.current_mobile ?? '');
-  const [selfieRes, sharedRes, ownerRes] = await Promise.all([
+  const [selfieRes, sharedRes, ownerRes, reviewRes] = await Promise.all([
     supabase.from('member_documents').select('id,file_path').eq('profile_id', profile.id).eq('document_type', 'selfie').limit(1).maybeSingle(),
     normalizedMobile
       ? supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('current_mobile', normalizedMobile)
@@ -38,11 +38,13 @@ async function buildSnapshot(profile) {
     normalizedMobile
       ? supabase.from('mobile_login_owners').select('profile_id').eq('mobile', normalizedMobile).maybeSingle()
       : Promise.resolve({ data: null, error: null }),
+    supabase.from('member_admin_reviews').select('*').eq('profile_id', profile.id).maybeSingle(),
   ]);
 
   if (selfieRes.error) throw selfieRes.error;
   if (sharedRes.error) throw sharedRes.error;
   if (ownerRes.error) throw ownerRes.error;
+  if (reviewRes.error) throw reviewRes.error;
 
   const selfieUploaded = Boolean(selfieRes.data);
   const profileComplete = computeProfileComplete(profile);
@@ -51,6 +53,8 @@ async function buildSnapshot(profile) {
   const isMobileLoginOwner = ownerProfileId === profile.id;
   const sharedMobilePending = sharedMobileCount > 1 && ownerProfileId !== profile.id;
   const completed = Boolean(profile.mobile_verified) && Boolean(profile.email_verified) && selfieUploaded && profileComplete && !sharedMobilePending;
+  const review = reviewRes.data ?? null;
+  const adminReviewStatus = review?.status ?? 'pending';
 
   return {
     profile_id: profile.id,
@@ -69,6 +73,10 @@ async function buildSnapshot(profile) {
     is_mobile_login_owner: isMobileLoginOwner,
     shared_mobile_pending: sharedMobilePending,
     completed,
+    admin_review_status: adminReviewStatus,
+    admin_reviewed_at: review?.approved_at ?? review?.disapproved_at ?? null,
+    admin_rejection_steps: review?.disapproved_steps ?? [],
+    admin_rejection_message: review?.disapproval_message ?? null,
     photo_public_url: buildPublicSelfieUrl(profile.photo_url ?? (selfieRes.data?.file_path ?? null)),
     updated_at: new Date().toISOString(),
   };

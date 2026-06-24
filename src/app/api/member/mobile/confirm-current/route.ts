@@ -1,5 +1,6 @@
 import { getMemberSession } from "@/lib/auth";
 import { addAuditLog, findVerifiedMobileOwnerFast, getMemberByIdForAuth, setMobileLoginOwner, updateMember, upsertVerificationSnapshot } from "@/lib/data";
+import { clearAdminRejectionSteps } from "@/lib/services/admin-review-service";
 
 export async function POST() {
   const session = await getMemberSession();
@@ -21,6 +22,7 @@ export async function POST() {
 
   await updateMember(session.subject, { mobileVerified: true });
   await setMobileLoginOwner(member.currentMobile, member.id);
+  await clearAdminRejectionSteps(session.subject, ["mobile"]);
   await upsertVerificationSnapshot(session.subject);
   await addAuditLog({
     actorType: "member",

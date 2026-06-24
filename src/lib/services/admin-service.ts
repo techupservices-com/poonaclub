@@ -1,9 +1,9 @@
 import { listAuditLogs } from "@/lib/services/audit-service";
 import { getMembersByIdsBasic } from "@/lib/services/member-service";
-import type { MemberWithVerification } from "@/lib/types";
+import type { AdminReviewStep, MemberDirectoryFilterKey, MemberWithVerification } from "@/lib/types";
 import { getRequiredSupabaseClient, type MemberVerificationSnapshotRow } from "@/lib/services/shared-db";
 
-type FilterKey = "verified" | "shared" | "inprogress" | "notstarted";
+type FilterKey = MemberDirectoryFilterKey;
 const AUDIT_MEMBER_LOOKUP_CHUNK_SIZE = 200;
 
 const IST_DATE_TIME_FORMATTER = new Intl.DateTimeFormat("en-IN", {
@@ -27,6 +27,7 @@ function applySummaryQueryFilters<T>(queryBuilder: T, query: string, filters: Fi
   let qb = queryBuilder as {
     or: (filter: string) => typeof queryBuilder;
     eq: (column: string, value: unknown) => typeof queryBuilder;
+    neq: (column: string, value: unknown) => typeof queryBuilder;
     gt: (column: string, value: number) => typeof queryBuilder;
   };
   const search = query.trim();
@@ -36,6 +37,16 @@ function applySummaryQueryFilters<T>(queryBuilder: T, query: string, filters: Fi
     qb = qb.or(
       `full_name.ilike.${value},membership_id.ilike.${value},current_mobile.ilike.${value},email.ilike.${value}`,
     ) as typeof qb;
+  }
+
+  const isAdminReviewedFilter = filters.includes("approved") || filters.includes("disapproved");
+  const excludeAdminReviewed = filters.some((filter) => filter !== "approved" && filter !== "disapproved");
+
+  if (filters.includes("approved")) qb = qb.eq("admin_review_status", "approved") as typeof qb;
+  if (filters.includes("disapproved")) qb = qb.eq("admin_review_status", "disapproved") as typeof qb;
+  if (excludeAdminReviewed && !isAdminReviewedFilter) {
+    qb = qb.neq("admin_review_status", "approved") as typeof qb;
+    qb = qb.neq("admin_review_status", "disapproved") as typeof qb;
   }
 
   if (filters.includes("verified")) qb = qb.eq("completed", true) as typeof qb;
@@ -100,17 +111,19 @@ export async function getMemberDirectoryData({
   const pageQuery = applySummaryQueryFilters(
     client
       .from("member_verification_snapshot")
-      .select("profile_id,membership_id,full_name,member_type,email,current_mobile,photo_public_url,profile_complete,mobile_verified,email_verified,selfie_uploaded,shared_mobile_count,completed", { count: "exact" })
+      .select("profile_id,membership_id,full_name,member_type,email,current_mobile,photo_public_url,profile_complete,mobile_verified,email_verified,selfie_uploaded,shared_mobile_count,completed,admin_review_status,admin_reviewed_at,admin_rejection_steps,admin_rejection_message", { count: "exact" })
       .order(sortConfig.column, { ascending: sortConfig.ascending })
       .range(start, start + pageSize - 1),
     query,
     filters,
   );
 
-  const [pageRes, allCountRes, verifiedCountRes, inprogressCountRes, notStartedCountRes, sharedCountRes] = await Promise.all([
+  const [pageRes, allCountRes, verifiedCountRes, approvedCountRes, disapprovedCountRes, inprogressCountRes, notStartedCountRes, sharedCountRes] = await Promise.all([
     pageQuery,
     applySummaryQueryFilters(client.from("member_verification_snapshot").select("profile_id", { count: "exact", head: true }), query, []),
     applySummaryQueryFilters(client.from("member_verification_snapshot").select("profile_id", { count: "exact", head: true }), query, ["verified"]),
+    applySummaryQueryFilters(client.from("member_verification_snapshot").select("profile_id", { count: "exact", head: true }), query, ["approved"]),
+    applySummaryQueryFilters(client.from("member_verification_snapshot").select("profile_id", { count: "exact", head: true }), query, ["disapproved"]),
     applySummaryQueryFilters(client.from("member_verification_snapshot").select("profile_id", { count: "exact", head: true }), query, ["inprogress"]),
     applySummaryQueryFilters(client.from("member_verification_snapshot").select("profile_id", { count: "exact", head: true }), query, ["notstarted"]),
     applySummaryQueryFilters(client.from("member_verification_snapshot").select("profile_id", { count: "exact", head: true }), query, ["shared"]),
@@ -119,6 +132,8 @@ export async function getMemberDirectoryData({
   if (pageRes.error) throw pageRes.error;
   if (allCountRes.error) throw allCountRes.error;
   if (verifiedCountRes.error) throw verifiedCountRes.error;
+  if (approvedCountRes.error) throw approvedCountRes.error;
+  if (disapprovedCountRes.error) throw disapprovedCountRes.error;
   if (inprogressCountRes.error) throw inprogressCountRes.error;
   if (notStartedCountRes.error) throw notStartedCountRes.error;
   if (sharedCountRes.error) throw sharedCountRes.error;
@@ -151,6 +166,10 @@ export async function getMemberDirectoryData({
       selfieUploaded: row.selfie_uploaded,
       documentUploaded: true,
       completed: row.completed,
+      adminReviewStatus: row.admin_review_status ?? "pending",
+      adminReviewedAt: row.admin_reviewed_at ?? null,
+      adminRejectionSteps: (row.admin_rejection_steps ?? []) as AdminReviewStep[],
+      adminRejectionMessage: row.admin_rejection_message ?? null,
     },
   }));
 
@@ -160,6 +179,8 @@ export async function getMemberDirectoryData({
     counts: {
       all: allCountRes.count ?? 0,
       verified: verifiedCountRes.count ?? 0,
+      approved: approvedCountRes.count ?? 0,
+      disapproved: disapprovedCountRes.count ?? 0,
       inprogress: inprogressCountRes.count ?? 0,
       notstarted: notStartedCountRes.count ?? 0,
       shared: sharedCountRes.count ?? 0,

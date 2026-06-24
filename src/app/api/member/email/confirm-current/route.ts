@@ -1,5 +1,6 @@
 import { getMemberSession } from "@/lib/auth";
 import { addAuditLog, findVerifiedEmailOwnerFast, getMemberByIdForAuth, updateMember, upsertVerificationSnapshot } from "@/lib/data";
+import { clearAdminRejectionSteps } from "@/lib/services/admin-review-service";
 
 export async function POST() {
   const session = await getMemberSession();
@@ -20,6 +21,7 @@ export async function POST() {
   }
 
   await updateMember(session.subject, { emailVerified: true });
+  await clearAdminRejectionSteps(session.subject, ["email"]);
   await upsertVerificationSnapshot(session.subject);
   await addAuditLog({
     actorType: "member",

@@ -2,6 +2,7 @@ import { z } from "zod";
 import { MEMBER_SESSION_COOKIE } from "@/lib/constants";
 import { createSessionToken } from "@/lib/auth";
 import { addAuditLog, getMemberById, setMobileLoginOwner, updateMember } from "@/lib/data";
+import { clearAdminRejectionSteps } from "@/lib/services/admin-review-service";
 import { verifyOtp } from "@/lib/otp-store";
 
 export async function POST(request: Request) {
@@ -22,6 +23,7 @@ export async function POST(request: Request) {
     ...(body.identifierType === "mobile" ? { mobileVerified: true } : {}),
     ...(body.identifierType === "email" ? { emailVerified: true } : {}),
   });
+  await clearAdminRejectionSteps(body.profileId, [body.identifierType]);
 
   if (body.identifierType === "mobile") {
     const member = await getMemberById(body.profileId);

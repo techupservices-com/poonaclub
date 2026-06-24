@@ -1,4 +1,4 @@
-import type { MemberProfile, MemberWithVerification, MobileChangeRequest } from "@/lib/types";
+import type { AdminReviewStep, MemberProfile, MemberWithVerification, MobileChangeRequest } from "@/lib/types";
 import { normalizeMobile } from "@/lib/utils";
 import { computeVerification } from "@/lib/verification";
 import {
@@ -7,6 +7,7 @@ import {
   mapMobileChange,
   mapProfile,
   type DocumentRow,
+  type MemberAdminReviewRow,
   type MobileChangeRow,
   type OtpRequestRow,
   type ProfileRow,
@@ -43,6 +44,19 @@ async function getProfilesAndDocumentsByIds(profileIds: string[]) {
     profiles: (profilesRes.data ?? []) as ProfileRow[],
     documents: (documentsRes.data ?? []) as DocumentRow[],
     otpRequests: (otpRes.data ?? []) as OtpRequestRow[],
+  };
+}
+
+function applyAdminReviewToVerification<T extends MemberWithVerification>(member: T, review?: MemberAdminReviewRow | null): T {
+  return {
+    ...member,
+    verification: {
+      ...member.verification,
+      adminReviewStatus: review?.status ?? "pending",
+      adminReviewedAt: review?.approved_at ?? review?.disapproved_at ?? null,
+      adminRejectionSteps: (review?.disapproved_steps ?? []) as AdminReviewStep[],
+      adminRejectionMessage: review?.disapproval_message ?? null,
+    },
   };
 }
 
@@ -119,15 +133,17 @@ export async function getMembersByIdsWithVerification(profileIds: string[]) {
 
 export async function getMemberById(id: string) {
   const client = getRequiredSupabaseClient();
-  const [profileRes, documentsRes, auditRes] = await Promise.all([
+  const [profileRes, documentsRes, auditRes, reviewRes] = await Promise.all([
     client.from("profiles").select("*").eq("id", id).maybeSingle(),
     client.from("member_documents").select("*").eq("profile_id", id),
     client.from("audit_logs").select("target_profile_id,action").eq("target_profile_id", id),
+    client.from("member_admin_reviews").select("*").eq("profile_id", id).maybeSingle(),
   ]);
 
   if (profileRes.error) throw profileRes.error;
   if (documentsRes.error) throw documentsRes.error;
   if (auditRes.error) throw auditRes.error;
+  if (reviewRes.error) throw reviewRes.error;
   if (!profileRes.data) return null;
 
   const row = profileRes.data as ProfileRow;
@@ -152,12 +168,13 @@ export async function getMemberById(id: string) {
   const linkedMemberCount = (linkedRes.data ?? []).length;
   const resolvedPhotoUrl = await getMemberProfilePhotoUrl(row.id, row.photo_url ?? undefined);
 
-  return {
+  const member = {
     ...profile,
     photoUrl: resolvedPhotoUrl ?? undefined,
     linkedMemberCount,
     verification: computeVerification(profile, memberDocuments),
   } satisfies MemberWithVerification;
+  return applyAdminReviewToVerification(member, (reviewRes.data as MemberAdminReviewRow | null) ?? null);
 }
 
 export async function getMemberByIdBasic(id: string) {

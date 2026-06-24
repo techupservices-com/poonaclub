@@ -10,7 +10,9 @@ export type IdentifierType = "mobile" | "email";
 export type OtpDeliveryChannel = "mobile" | "sms" | "whatsapp" | "email";
 
 export type VerificationState = "pending" | "verified" | "attention";
-export type MemberDirectoryFilterKey = "verified" | "shared" | "inprogress" | "notstarted";
+export type AdminReviewStatus = "pending" | "approved" | "disapproved";
+export type AdminReviewStep = "selfie" | "mobile" | "email";
+export type MemberDirectoryFilterKey = "verified" | "approved" | "disapproved" | "shared" | "inprogress" | "notstarted";
 export type BroadcastEmailSelectionMode = "selected_visible" | "all_filtered";
 export type BroadcastEmailStatus = "queued" | "processing" | "completed" | "completed_with_errors" | "failed" | "cancelled";
 export type BroadcastEmailBatchStatus = "pending" | "claimed" | "sending" | "retryable" | "completed" | "failed";
@@ -96,6 +98,10 @@ export interface VerificationChecklist {
   selfieUploaded: boolean;
   documentUploaded: boolean;
   completed: boolean;
+  adminReviewStatus?: AdminReviewStatus;
+  adminReviewedAt?: string | null;
+  adminRejectionSteps?: AdminReviewStep[];
+  adminRejectionMessage?: string | null;
 }
 
 export interface MemberWithVerification extends MemberProfile {
@@ -180,3 +186,5 @@ export interface BroadcastEmailCampaign {
 export interface BroadcastEmailCampaignDetail extends BroadcastEmailCampaign {
   batches: BroadcastEmailBatch[];
 }
+
+export type AdminSelectionMode = "selected_ids" | "all_filtered";

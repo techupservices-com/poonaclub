@@ -12,10 +12,12 @@ export function MemberSelfieUploader({
   photoUrl,
   hasSelfie,
   variant = "record",
+  adminRejectionMessage,
 }: {
   photoUrl: string | null;
   hasSelfie: boolean;
   variant?: "record" | "panel";
+  adminRejectionMessage?: string | null;
 }) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -119,13 +121,20 @@ export function MemberSelfieUploader({
           </div>
         )}
         <span className="absolute inset-x-2 bottom-2 rounded-full bg-white/92 px-3 py-2 text-center text-[11px] font-semibold text-[#24345f] shadow-sm transition group-hover:bg-white sm:inset-x-3 sm:bottom-3 sm:text-xs">
-          {uploadState === "uploading"
+          {adminRejectionMessage !== undefined
+            ? "Rejected - replace photo"
+            : uploadState === "uploading"
             ? "Uploading..."
             : hasSelfie || photoUrl
                 ? "Replace photo"
                 : "Upload selfie"}
         </span>
       </div>
+      {adminRejectionMessage !== undefined ? (
+        <div className="rounded-[20px] border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-800">
+          <strong>Admin review:</strong> This selfie was marked pending. The current image remains visible, but please upload a new selfie for approval.{adminRejectionMessage ? ` Message: ${adminRejectionMessage}` : ""}
+        </div>
+      ) : null}
       <input
         ref={inputRef}
         type="file"
