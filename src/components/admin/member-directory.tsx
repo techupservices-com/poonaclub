@@ -252,7 +252,8 @@ export function MemberDirectory({
         }),
       });
       if (!response.ok) {
-        setActionMessage("Unable to prepare Excel download.");
+        const payload = await response.json().catch(() => null);
+        setActionMessage(payload?.error ?? "Unable to prepare Excel download.");
         return;
       }
       const blob = await response.blob();

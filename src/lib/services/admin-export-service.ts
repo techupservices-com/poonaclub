@@ -2,7 +2,7 @@ import { resolveAdminSelection } from "@/lib/services/admin-selection-service";
 import { getRequiredSupabaseClient, type ProfileRow } from "@/lib/services/shared-db";
 import type { AdminSelectionMode, MemberDirectoryFilterKey } from "@/lib/types";
 
-const DB_CHUNK_SIZE = 500;
+const PROFILE_EXPORT_LOOKUP_CHUNK_SIZE = 200;
 
 export async function getSelectedProfileRows(input: {
   selectionMode: AdminSelectionMode;
@@ -15,8 +15,8 @@ export async function getSelectedProfileRows(input: {
 
   const client = getRequiredSupabaseClient();
   const rows: ProfileRow[] = [];
-  for (let index = 0; index < profileIds.length; index += DB_CHUNK_SIZE) {
-    const chunk = profileIds.slice(index, index + DB_CHUNK_SIZE);
+  for (let index = 0; index < profileIds.length; index += PROFILE_EXPORT_LOOKUP_CHUNK_SIZE) {
+    const chunk = profileIds.slice(index, index + PROFILE_EXPORT_LOOKUP_CHUNK_SIZE);
     const { data, error } = await client.from("profiles").select("*").in("id", chunk);
     if (error) throw error;
     rows.push(...((data ?? []) as ProfileRow[]));
