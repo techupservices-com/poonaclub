@@ -44,21 +44,29 @@ function normalizePincode(value) {
   return String(value ?? "").trim().replace(/\.0$/, "");
 }
 
+function firstValue(row, keys) {
+  for (const key of keys) {
+    const value = row[key];
+    if (value !== undefined && value !== null && String(value).trim() !== "") return value;
+  }
+  return "";
+}
+
 function mapRow(row) {
   return {
     membership_id: normalizeText(row["Member ID"]),
     prefix: normalizeText(row["Member Prefix"]),
     full_name: normalizeText(row["Member Name"]),
     member_type: normalizeText(row["Member Type"]),
-    current_mobile: normalizeMobile(row["Mobile No."] || row["Mobile  No."]),
-    email: normalizeText(row["Email"]),
+    current_mobile: normalizeMobile(firstValue(row, ["Mobile No.", "Mobile  No.", "Updated Mobile No", "Mobile no."])),
+    email: normalizeText(firstValue(row, ["Email", "Updated Email id", "Email id"])),
     status: normalizeText(row["Status"]),
     address1: normalizeText(row["Address1"]),
     address2: normalizeText(row["Address2"]),
     address3: normalizeText(row["Address3"]),
     city: normalizeText(row["City"]),
     pincode: normalizePincode(row["Pincode"]),
-    photo_url: normalizeText(row["Photo"]) || null,
+    photo_url: normalizeText(firstValue(row, ["Photo", "Photos"])) || null,
   };
 }
 
@@ -88,8 +96,7 @@ function chunks(values, size) {
 
 const prepared = rows.map(mapRow);
 const duplicates = new Set();
-const seen = new Set();
-const validRows = [];
+const validRowsByMembershipId = new Map();
 let skippedMissingMembershipId = 0;
 
 for (const row of prepared) {
@@ -97,13 +104,13 @@ for (const row of prepared) {
     skippedMissingMembershipId += 1;
     continue;
   }
-  if (seen.has(row.membership_id)) {
+  if (validRowsByMembershipId.has(row.membership_id)) {
     duplicates.add(row.membership_id);
-    continue;
   }
-  seen.add(row.membership_id);
-  validRows.push(row);
+  validRowsByMembershipId.set(row.membership_id, row);
 }
+
+const validRows = [...validRowsByMembershipId.values()];
 
 const membershipIds = validRows.map((row) => row.membership_id);
 const existingProfiles = [];
@@ -138,6 +145,8 @@ for (const row of validRows) {
   }
 
   const merged = mergeProfile(existing, row);
+  const mobileChanged = Boolean(row.current_mobile) && normalizeMobile(existing.current_mobile) !== row.current_mobile;
+  const emailChanged = Boolean(row.email) && normalizeText(existing.email).toLowerCase() !== row.email.toLowerCase();
   const fieldsToCompare = [
     "prefix",
     "full_name",
@@ -159,8 +168,32 @@ for (const row of validRows) {
     continue;
   }
 
-  const { error } = await supabase.from("profiles").update({ ...merged, updated_at: new Date().toISOString() }).eq("id", existing.id);
+  const profileUpdates = {
+    ...merged,
+    ...(mobileChanged ? { mobile_verified: false } : {}),
+    ...(emailChanged ? { email_verified: false } : {}),
+    updated_at: new Date().toISOString(),
+  };
+
+  const { error } = await supabase.from("profiles").update(profileUpdates).eq("id", existing.id);
   if (error) throw error;
+
+  if (mobileChanged || emailChanged) {
+    const { error: reviewError } = await supabase
+      .from("member_admin_reviews")
+      .update({
+        status: "pending",
+        approved_by: null,
+        approved_at: null,
+        disapproved_by: null,
+        disapproved_at: null,
+        disapproved_steps: [],
+        disapproval_message: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("profile_id", existing.id);
+    if (reviewError) throw reviewError;
+  }
   updated += 1;
   affectedProfileIds.push(existing.id);
 }
